@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <title>MES-AI-A ASINリサーチテーブル</title>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
       --bg-main: #f5f7fb;
@@ -46,7 +48,7 @@
     }
 
     .toolbar {
-      padding: 12px 24px;
+      padding: 10px 24px 6px;
       display: flex;
       align-items: center;
       gap: 10px;
@@ -63,17 +65,17 @@
       color: var(--text-muted);
     }
     .toolbar input[type="text"] {
-      padding: 6px 10px;
+      padding: 4px 8px;
       border-radius: 8px;
       border: 1px solid var(--border);
-      min-width: 220px;
-      font-size: 13px;
+      min-width: 160px;  /* 小さめ */
+      font-size: 12px;
     }
     .toolbar button {
       border-radius: 999px;
       border: none;
-      font-size: 13px;
-      padding: 7px 14px;
+      font-size: 12px;
+      padding: 6px 12px;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
@@ -104,6 +106,33 @@
       align-items: center;
       gap: 6px;
     }
+
+    .asin-catalog {
+      padding: 0 24px 8px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .asin-catalog-label {
+      margin-right: 4px;
+      font-weight: 600;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #e0e7ff;
+      color: #3730a3;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .pill-danger { background: #fee2e2; color: #b91c1c; }
+    .pill-ok { background: #dcfce7; color: #15803d; }
 
     .table-wrapper { flex: 1; padding: 8px 16px 24px; }
     .table-container {
@@ -160,26 +189,23 @@
     }
     td input.asin-input {
       width: 100%;
-      padding: 4px 6px;
+      padding: 3px 6px;
       font-size: 11px;
       border-radius: 8px;
       border: 1px solid var(--border);
     }
     td.readonly-cell { font-size: 11px; }
 
-    .pill {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 2px 6px;
-      border-radius: 999px;
-      background: #ecfeff;
-      color: #0891b2;
-      font-size: 10px;
-      font-weight: 600;
+    .sparkline-container {
+      width: 140px;
+      height: 48px;
+      cursor: pointer;
     }
-    .pill-danger { background: #fee2e2; color: #b91c1c; }
-    .pill-ok { background: #dcfce7; color: #15803d; }
+    .sparkline-caption {
+      font-size: 9px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
 
     .table-footer {
       padding: 6px 12px;
@@ -197,10 +223,9 @@
       padding: 4px 8px 8px;
     }
 
-    /* 列設定パネル */
-    .column-settings-toggle {
-      margin-left: auto;
-    }
+    .column-settings-toggle { margin-left: auto; }
+
+    /* 列設定パネル（ドラッグ & 非表示ボタン） */
     .column-settings-panel {
       position: fixed;
       top: 72px;
@@ -237,18 +262,35 @@
       gap: 6px;
       padding: 4px 0;
       font-size: 11px;
+      cursor: grab;
     }
-    .col-setting label {
+    .col-setting.drag-over {
+      background: #eef2ff;
+      border-radius: 6px;
+    }
+    .col-handle {
+      width: 12px;
+      text-align: center;
+      font-size: 13px;
+      color: #9ca3af;
+      cursor: grab;
+    }
+    .col-setting-label {
       flex: 1;
       text-align: left;
     }
+    .col-setting-label.hidden {
+      opacity: 0.5;
+      text-decoration: line-through;
+    }
     .col-setting button {
       border-radius: 6px;
-      padding: 2px 4px;
+      padding: 2px 6px;
       font-size: 10px;
       border: 1px solid var(--border);
       background: #f9fafb;
       cursor: pointer;
+      white-space: nowrap;
     }
     .col-setting button:hover { background: #eef2ff; }
     .column-settings-footer {
@@ -258,17 +300,63 @@
       color: var(--text-muted);
     }
 
+    /* 拡大グラフ用モーダル */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 60;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      background: #fff;
+      border-radius: 16px;
+      padding: 12px 16px 16px;
+      max-width: 900px;
+      width: 95%;
+      box-shadow: 0 20px 40px rgba(15,23,42,0.4);
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .modal-subtitle {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .modal-close-btn {
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #f9fafb;
+      font-size: 11px;
+      padding: 2px 8px;
+      cursor: pointer;
+    }
+    .modal-close-btn:hover { background: #eef2ff; }
+    .modal-chart-container {
+      height: 360px;
+    }
+
     @media (max-width: 768px) {
       header { flex-direction: column; align-items: flex-start; }
       .toolbar { padding-inline: 16px; }
-      .toolbar input[type="text"] { min-width: 160px; flex: 1; }
+      .toolbar input[type="text"] { min-width: 140px; flex: 1; }
       .status { width: 100%; justify-content: flex-start; margin-left: 0; }
+      .asin-catalog { padding-inline: 16px; }
       .column-settings-panel {
         top: auto;
         bottom: 12px;
         right: 10px;
         width: 260px;
       }
+      .modal-chart-container { height: 260px; }
     }
   </style>
 </head>
@@ -277,11 +365,9 @@
   <header>
     <div>
       <h1>MES-AI-A ASINダッシュボード</h1>
-      <div class="subtitle">ASINを入力すると、商品情報・利益予測などを自動表示します。</div>
+      <div class="subtitle">ASINを入力すると、商品情報・利益予測・需給グラフ（180日）などを自動表示します。</div>
     </div>
-    <div class="status">
-      ローカルASINデータ：5件
-    </div>
+    <div class="status" id="headerStatus"></div>
   </header>
 
   <div class="toolbar">
@@ -300,16 +386,38 @@
     </div>
   </div>
 
+  <!-- 登録ASIN一覧 -->
+  <div class="asin-catalog" id="asinCatalog"></div>
+
   <!-- 列設定パネル -->
   <div id="columnSettingsPanel" class="column-settings-panel">
     <div class="column-settings-header">
       <span>列設定</span>
-      <button id="closeColumnSettingsBtn" style="border-radius:999px;border:1px solid var(--border);background:#f9fafb;font-size:10px;padding:2px 6px;cursor:pointer;">×</button>
+      <button id="closeColumnSettingsBtn" class="modal-close-btn">×</button>
     </div>
     <div id="columnSettingsList" class="column-settings-list"></div>
     <div class="column-settings-footer">
-      <span>チェックで表示／非表示</span>
-      <span>↑↓で並び替え</span>
+      <span>つかんでドラッグで順番変更</span>
+      <span>右のボタンで非表示</span>
+    </div>
+  </div>
+
+  <!-- 拡大グラフモーダル -->
+  <div id="demandModalBackdrop" class="modal-backdrop">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <div>
+          <div>需給推移グラフ（180日）</div>
+          <div class="modal-subtitle" id="demandModalSubtitle"></div>
+        </div>
+        <button id="demandModalCloseBtn" class="modal-close-btn">閉じる</button>
+      </div>
+      <div class="modal-chart-container">
+        <canvas id="demandModalChart"></canvas>
+      </div>
+      <div class="modal-subtitle">
+        ※ホバーで「ランキング / セラー数 / 価格」の詳細な数値を確認できます。
+      </div>
     </div>
   </div>
 
@@ -325,7 +433,7 @@
       </div>
       <div class="table-footer">
         <div>行を追加 → 左端の ASIN を入力すると自動で各項目が埋まります。</div>
-        <div>「レビュー数推移グラフ」「需給推移グラフ」は現在は空欄で保持しています。</div>
+        <div>需給グラフのセルをクリックすると、拡大表示＆詳細ツールチップが出ます。</div>
       </div>
     </div>
     <div class="helper-text">
@@ -336,7 +444,7 @@
 </div>
 
 <script>
-  // ==== 列定義（表示順 & データキー） ====
+  // ==== 列定義（可視・順番を columns 配列で管理） ====
   const BASE_COLUMNS = [
     { id: "ASIN", label: "ASIN", type: "asinInput", visible: true },
     { id: "商品画像", label: "商品画像", type: "image", visible: true },
@@ -363,7 +471,7 @@
     {
       id: "需給推移",
       label: "需給推移<br>☐《需要＆供給》<br>☐《供給＆価格》<br>☐《レビュー数＆●●》",
-      visible: false
+      visible: true  // グラフを見たいのでデフォルト表示
     },
     { id: "30日販売数", label: "30日<br>販売数", visible: true },
     { id: "90日販売数", label: "90日<br>販売数", visible: false },
@@ -400,12 +508,9 @@
     { id: "送料", label: "送料", visible: false },
     { id: "関税", label: "関税", visible: false }
   ];
-
-  // 可変の列配列（並び替え・可視状態はここを更新）
   let columns = BASE_COLUMNS.map(c => ({ ...c }));
 
-  // ==== ダミーASINデータ ====
-  // 「レビュー数推移グラフ」「需給推移」はすべて空文字にしてあります。
+  // ==== ダミーASINデータ（レビュー数推移グラフ・需給推移は空文字） ====
   const ASIN_DATA = {
     "B0A0000001": {
       ASIN: "B0A0000001",
@@ -704,8 +809,60 @@
     }
   };
 
+  // ==== 需給推移データ生成（擬似） ====
+  function createPRNG(seedStr) {
+    let seed = 0;
+    for (let i = 0; i < seedStr.length; i++) seed += seedStr.charCodeAt(i);
+    return function () {
+      seed = (seed * 9301 + 49297) % 233280;
+      return seed / 233280;
+    };
+  }
+
+  function getDemandSupplySeries(asin) {
+    const rand = createPRNG(asin);
+    const days = 180;
+    const labels = [];
+    const ranking = [];
+    const sellers = [];
+    const price = [];
+
+    let rank = 60000 * (0.6 + rand() * 0.4);   // 36k〜60kくらいからスタート
+    let seller = 5 + Math.round(rand() * 5);    // 5〜10
+    let p = 25 + rand() * 30;                   // $25〜55
+
+    for (let i = days - 1; i >= 0; i--) {
+      labels.push(`${i}日前`);
+
+      // ちょっとしたランダムウォーク
+      rank += (rand() - 0.5) * 4000;
+      rank = Math.max(5000, Math.min(80000, rank));
+
+      seller += (rand() - 0.5) * 2;
+      seller = Math.max(1, Math.min(25, seller));
+
+      p += (rand() - 0.5) * 2;
+      p = Math.max(10, Math.min(80, p));
+
+      ranking.push(Math.round(rank));
+      sellers.push(Number(seller.toFixed(1)));
+      price.push(Number(p.toFixed(2)));
+    }
+
+    // 時系列を古い→新しい順にしたい場合はreverse
+    labels.reverse();
+    ranking.reverse();
+    sellers.reverse();
+    price.reverse();
+
+    return { labels, ranking, sellers, price };
+  }
+
+  // ==== DOM参照 ====
   const headerRow = document.getElementById("tableHeaderRow");
   const tbody = document.getElementById("tableBody");
+  const headerStatus = document.getElementById("headerStatus");
+  const asinCatalog = document.getElementById("asinCatalog");
 
   function visibleColumns() {
     return columns.filter(c => c.visible !== false);
@@ -731,7 +888,7 @@
         const input = document.createElement("input");
         input.type = "text";
         input.className = "asin-input";
-        input.placeholder = "ASINを入力";
+        input.placeholder = "ASIN";
         input.value = presetAsin;
         input.addEventListener("change", () => handleAsinChange(tr, input.value));
         input.addEventListener("blur", () => handleAsinChange(tr, input.value));
@@ -765,7 +922,6 @@
     }
 
     if (!data) {
-      // 未登録ASIN → 他のセルを空に
       visibleColumns().forEach(col => {
         if (col.id === "ASIN") return;
         const cell = row.querySelector(`td[data-col-id="${col.id}"]`);
@@ -812,6 +968,9 @@
           a.className = "pill";
           cell.appendChild(a);
         }
+      } else if (col.id === "需給推移") {
+        cell.innerHTML = "";
+        renderDemandSparkline(cell, asin);
       } else {
         cell.textContent = value;
       }
@@ -820,7 +979,6 @@
     row.dataset.loaded = "true";
   }
 
-  // 現在の行のASIN一覧を取得
   function getCurrentRowAsins() {
     return Array.from(tbody.querySelectorAll("tr")).map(tr => {
       const input = tr.querySelector('td[data-col-id="ASIN"] input.asin-input');
@@ -828,7 +986,6 @@
     });
   }
 
-  // 列設定変更後にテーブルを再構築
   function rebuildTableFromCurrentRows() {
     const asins = getCurrentRowAsins();
     tbody.innerHTML = "";
@@ -836,9 +993,198 @@
     asins.forEach(asin => createRow(asin));
   }
 
-  // ==== 列設定パネル ====
+  // ==== 需給グラフ（ミニ & モーダル） ====
+  const demandModalBackdrop = document.getElementById("demandModalBackdrop");
+  const demandModalCloseBtn = document.getElementById("demandModalCloseBtn");
+  const demandModalSubtitle = document.getElementById("demandModalSubtitle");
+  const demandModalChartCanvas = document.getElementById("demandModalChart");
+  let demandModalChartInstance = null;
+
+  function renderDemandSparkline(cell, asin) {
+    if (!ASIN_DATA[asin]) {
+      cell.textContent = "";
+      return;
+    }
+    const container = document.createElement("div");
+    container.className = "sparkline-container";
+
+    const canvas = document.createElement("canvas");
+    canvas.width = 140;
+    canvas.height = 40;
+    container.appendChild(canvas);
+
+    const caption = document.createElement("div");
+    caption.className = "sparkline-caption";
+    caption.textContent = "ランキング / セラー数 / 価格（180日）";
+    cell.appendChild(container);
+    cell.appendChild(caption);
+
+    const data = getDemandSupplySeries(asin);
+
+    new Chart(canvas.getContext("2d"), {
+      type: "line",
+      data: {
+        labels: data.labels,
+        datasets: [
+          {
+            label: "ランキング",
+            data: data.ranking,
+            borderWidth: 1,
+            pointRadius: 0,
+            tension: 0.2,
+            borderColor: "#60a5fa",
+            yAxisID: "yRank"
+          },
+          {
+            label: "セラー数",
+            data: data.sellers,
+            borderWidth: 1,
+            pointRadius: 0,
+            tension: 0.2,
+            borderColor: "#22c55e",
+            yAxisID: "ySeller"
+          },
+          {
+            label: "価格",
+            data: data.price,
+            borderWidth: 1,
+            pointRadius: 0,
+            tension: 0.2,
+            borderColor: "#f97316",
+            yAxisID: "yPrice"
+          }
+        ]
+      },
+      options: {
+        responsive: false,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { enabled: false }
+        },
+        scales: {
+          x: { display: false },
+          yRank: { display: false },
+          ySeller: { display: false },
+          yPrice: { display: false }
+        }
+      }
+    });
+
+    container.addEventListener("click", () => {
+      openDemandModal(asin, data);
+    });
+  }
+
+  function openDemandModal(asin, data) {
+    const asinData = ASIN_DATA[asin];
+    demandModalSubtitle.textContent = `ASIN: ${asin}　${asinData ? asinData.品名 : ""}`;
+    demandModalBackdrop.classList.add("open");
+
+    if (demandModalChartInstance) {
+      demandModalChartInstance.destroy();
+      demandModalChartInstance = null;
+    }
+    const ctx = demandModalChartCanvas.getContext("2d");
+
+    demandModalChartInstance = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: data.labels,
+        datasets: [
+          {
+            label: "ランキング（小さいほど上位）",
+            data: data.ranking,
+            borderWidth: 2,
+            pointRadius: 0,
+            tension: 0.25,
+            borderColor: "#60a5fa",
+            yAxisID: "yRank"
+          },
+          {
+            label: "セラー数",
+            data: data.sellers,
+            borderWidth: 2,
+            pointRadius: 0,
+            tension: 0.25,
+            borderColor: "#22c55e",
+            yAxisID: "ySeller"
+          },
+          {
+            label: "価格（USD）",
+            data: data.price,
+            borderWidth: 2,
+            pointRadius: 0,
+            tension: 0.25,
+            borderColor: "#f97316",
+            yAxisID: "yPrice"
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          mode: "index",
+          intersect: false
+        },
+        plugins: {
+          legend: { position: "top" },
+          tooltip: {
+            enabled: true,
+            callbacks: {
+              label: (ctx) => {
+                const label = ctx.dataset.label || "";
+                if (ctx.dataset.yAxisID === "yPrice") {
+                  return `${label}: $${ctx.parsed.y.toFixed(2)}`;
+                }
+                return `${label}: ${ctx.parsed.y}`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            display: true,
+            ticks: { maxTicksLimit: 12 }
+          },
+          yRank: {
+            type: "linear",
+            position: "left",
+            reverse: true,
+            title: { display: true, text: "ランキング" }
+          },
+          ySeller: {
+            type: "linear",
+            position: "right",
+            title: { display: true, text: "セラー数" },
+            grid: { drawOnChartArea: false }
+          },
+          yPrice: {
+            type: "linear",
+            position: "right",
+            offset: true,
+            title: { display: true, text: "価格(USD)" },
+            grid: { drawOnChartArea: false }
+          }
+        }
+      }
+    });
+  }
+
+  demandModalBackdrop.addEventListener("click", () => {
+    demandModalBackdrop.classList.remove("open");
+  });
+  demandModalCloseBtn.addEventListener("click", () => {
+    demandModalBackdrop.classList.remove("open");
+  });
+
+  // ==== 列設定パネル（ドラッグ & 非表示ボタン） ====
   const columnSettingsPanel = document.getElementById("columnSettingsPanel");
   const columnSettingsList = document.getElementById("columnSettingsList");
+  const toggleColumnSettingsBtn = document.getElementById("toggleColumnSettingsBtn");
+  const closeColumnSettingsBtn = document.getElementById("closeColumnSettingsBtn");
+  let dragSourceColId = null;
 
   function buildColumnSettingsPanel() {
     columnSettingsList.innerHTML = "";
@@ -847,60 +1193,114 @@
       const wrapper = document.createElement("div");
       wrapper.className = "col-setting";
       wrapper.dataset.colId = col.id;
+      wrapper.draggable = true;
 
-      const checkbox = document.createElement("input");
-      checkbox.type = "checkbox";
-      checkbox.checked = col.visible !== false;
+      const handle = document.createElement("div");
+      handle.className = "col-handle";
+      handle.textContent = "≡";
 
-      // ASIN列は非表示にできないようにする（必要ならここを外せばOK）
+      const label = document.createElement("div");
+      label.className = "col-setting-label";
+      label.textContent = col.id;
+      if (!col.visible) label.classList.add("hidden");
+
+      const btn = document.createElement("button");
+      btn.textContent = col.visible ? "非表示" : "表示";
       if (col.id === "ASIN") {
-        checkbox.disabled = true;
+        btn.disabled = true;
+        btn.textContent = "固定";
       }
 
-      checkbox.addEventListener("change", () => {
-        col.visible = checkbox.checked;
-        rebuildTableFromCurrentRows();
-        buildColumnSettingsPanel(); // チェック状態を同期
-      });
-
-      const label = document.createElement("label");
-      label.textContent = col.id;
-
-      const upBtn = document.createElement("button");
-      upBtn.textContent = "↑";
-      upBtn.addEventListener("click", () => {
-        if (index === 0) return;
-        [columns[index - 1], columns[index]] = [columns[index], columns[index - 1]];
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (col.id === "ASIN") return;
+        col.visible = !col.visible;
         rebuildTableFromCurrentRows();
         buildColumnSettingsPanel();
       });
 
-      const downBtn = document.createElement("button");
-      downBtn.textContent = "↓";
-      downBtn.addEventListener("click", () => {
-        if (index === columns.length - 1) return;
-        [columns[index + 1], columns[index]] = [columns[index], columns[index + 1]];
-        rebuildTableFromCurrentRows();
-        buildColumnSettingsPanel();
-      });
-
-      wrapper.appendChild(checkbox);
+      wrapper.appendChild(handle);
       wrapper.appendChild(label);
-      wrapper.appendChild(upBtn);
-      wrapper.appendChild(downBtn);
+      wrapper.appendChild(btn);
       columnSettingsList.appendChild(wrapper);
+
+      wrapper.addEventListener("dragstart", (e) => {
+        dragSourceColId = col.id;
+        e.dataTransfer.effectAllowed = "move";
+      });
+      wrapper.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        wrapper.classList.add("drag-over");
+        e.dataTransfer.dropEffect = "move";
+      });
+      wrapper.addEventListener("dragleave", () => {
+        wrapper.classList.remove("drag-over");
+      });
+      wrapper.addEventListener("drop", (e) => {
+        e.preventDefault();
+        wrapper.classList.remove("drag-over");
+        const targetId = col.id;
+        if (!dragSourceColId || dragSourceColId === targetId) return;
+
+        const srcIndex = columns.findIndex(c => c.id === dragSourceColId);
+        const dstIndex = columns.findIndex(c => c.id === targetId);
+        if (srcIndex === -1 || dstIndex === -1) return;
+
+        const [moved] = columns.splice(srcIndex, 1);
+        columns.splice(dstIndex, 0, moved);
+
+        dragSourceColId = null;
+        rebuildTableFromCurrentRows();
+        buildColumnSettingsPanel();
+      });
     });
   }
 
-  // ==== 初期化 ====
+  toggleColumnSettingsBtn.addEventListener("click", () => {
+    const isOpen = columnSettingsPanel.classList.contains("open");
+    if (!isOpen) {
+      buildColumnSettingsPanel();
+      columnSettingsPanel.classList.add("open");
+    } else {
+      columnSettingsPanel.classList.remove("open");
+    }
+  });
+  closeColumnSettingsBtn.addEventListener("click", () => {
+    columnSettingsPanel.classList.remove("open");
+  });
+  document.addEventListener("click", (e) => {
+    if (!columnSettingsPanel.classList.contains("open")) return;
+    const target = e.target;
+    if (!columnSettingsPanel.contains(target) && target !== toggleColumnSettingsBtn) {
+      columnSettingsPanel.classList.remove("open");
+    }
+  });
+
+  // ==== 初期化（ASINカタログ, テーブル, ボタン） ====
   const globalInput = document.getElementById("globalAsinInput");
   const addRowFromAsinBtn = document.getElementById("addRowFromAsinBtn");
   const addEmptyRowBtn = document.getElementById("addEmptyRowBtn");
-  const toggleColumnSettingsBtn = document.getElementById("toggleColumnSettingsBtn");
-  const closeColumnSettingsBtn = document.getElementById("closeColumnSettingsBtn");
 
+  function buildAsinCatalogAndStatus() {
+    const asins = Object.keys(ASIN_DATA);
+    headerStatus.textContent = `登録ASIN数：${asins.length}件`;
+    asinCatalog.innerHTML = "";
+    const label = document.createElement("span");
+    label.className = "asin-catalog-label";
+    label.textContent = "データがあるASIN：";
+    asinCatalog.appendChild(label);
+
+    asins.forEach(a => {
+      const span = document.createElement("span");
+      span.className = "pill";
+      span.textContent = a;
+      asinCatalog.appendChild(span);
+    });
+  }
+
+  buildAsinCatalogAndStatus();
   buildHeader();
-  createRow(); // 最初に1行だけ用意
+  createRow(); // 最初の空行
 
   addRowFromAsinBtn.addEventListener("click", () => {
     const asin = globalInput.value.trim();
@@ -918,32 +1318,6 @@
     const row = createRow();
     const input = row.querySelector('td[data-col-id="ASIN"] input.asin-input');
     if (input) input.focus();
-  });
-
-  toggleColumnSettingsBtn.addEventListener("click", () => {
-    const isOpen = columnSettingsPanel.classList.contains("open");
-    if (!isOpen) {
-      buildColumnSettingsPanel();
-      columnSettingsPanel.classList.add("open");
-    } else {
-      columnSettingsPanel.classList.remove("open");
-    }
-  });
-
-  closeColumnSettingsBtn.addEventListener("click", () => {
-    columnSettingsPanel.classList.remove("open");
-  });
-
-  // パネル外クリックで閉じる
-  document.addEventListener("click", (e) => {
-    if (!columnSettingsPanel.classList.contains("open")) return;
-    const target = e.target;
-    if (
-      !columnSettingsPanel.contains(target) &&
-      target !== toggleColumnSettingsBtn
-    ) {
-      columnSettingsPanel.classList.remove("open");
-    }
   });
 </script>
 </body>
