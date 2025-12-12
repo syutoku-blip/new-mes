@@ -1,547 +1,195 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <title>MES-AI-A ASINダッシュボード</title>
-
-  <!-- Chart.js -->
+  <meta charset="UTF-8">
+  <title>MES-AI-A Detail App</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
   <style>
-    :root {
-      --bg-main: #f5f7fb;
-      --bg-header: #ffffff;
-      --bg-header2: #eef1fb;
-      --bg-row-alt: #fafbff;
-      --border: #d4d8ea;
-      --accent: #4b6bff;
-      --text-main: #1f2933;
-      --text-muted: #6b7280;
-    }
-    * { box-sizing: border-box; }
     body {
       margin: 0;
-      padding: 0;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: var(--bg-main);
-      color: var(--text-main);
-    }
-    .app-shell { min-height: 100vh; display: flex; flex-direction: column; }
-
-    header {
-      padding: 14px 24px;
-      background: linear-gradient(90deg, #4b6bff, #8a63ff);
-      color: #fff;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-    }
-    header h1 {
-      margin: 0;
-      font-size: 18px;
-      font-weight: 650;
-      letter-spacing: .03em;
-    }
-    header .subtitle {
-      font-size: 12px;
-      opacity: 0.9;
+      background: #f4f6ff;
     }
 
-    .nav-switch-group {
+    /* ページ切り替えボタン */
+    .nav-bar {
       display: flex;
       gap: 8px;
-      align-items: center;
-    }
-    .nav-tab-btn {
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,0.6);
-      background: rgba(255,255,255,0.15);
-      font-size: 12px;
-      padding: 5px 12px;
-      cursor: pointer;
-      color: #e5e7ff;
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      backdrop-filter: blur(6px);
-      transition: background 0.12s, color 0.12s, transform 0.06s;
-    }
-    .nav-tab-btn:hover {
-      background: rgba(255,255,255,0.25);
-      transform: translateY(-1px);
-    }
-    .nav-tab-btn.active {
+      padding: 12px 16px;
       background: #ffffff;
-      color: #4b6bff;
-      border-color: #ffffff;
+      border-bottom: 1px solid #e5e7eb;
     }
-
-    .toolbar {
-      padding: 8px 24px 4px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-    .toolbar-group {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    .toolbar label {
-      font-size: 12px;
-      color: var(--text-muted);
-    }
-    .toolbar input[type="text"] {
-      padding: 3px 8px;
-      border-radius: 999px;
-      border: 1px solid var(--border);
-      min-width: 140px;
-      font-size: 12px;
-    }
-    .toolbar button {
-      border-radius: 999px;
+    .nav-btn {
       border: none;
-      font-size: 12px;
-      padding: 5px 11px;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      transition: transform 0.04s ease-out, box-shadow 0.04s ease-out, background 0.1s;
-    }
-    .btn-primary {
-      background: var(--accent);
-      color: #fff;
-      box-shadow: 0 2px 6px rgba(75,107,255,0.35);
-    }
-    .btn-primary:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 10px rgba(75,107,255,0.45);
-    }
-    .btn-ghost {
-      background: #ffffff;
-      color: var(--text-main);
-      border: 1px solid var(--border);
-    }
-    .btn-ghost:hover { background: #f3f4ff; }
-
-    .status {
-      margin-left: auto;
-      font-size: 12px;
-      color: var(--text-muted);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .asin-catalog {
-      padding: 0 24px 4px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 4px;
-      font-size: 10px;
-      color: var(--text-muted);
-    }
-    .asin-catalog-label {
-      margin-right: 4px;
-      font-weight: 600;
-    }
-
-    .pill {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 1px 7px;
       border-radius: 999px;
-      background: #e0e7ff;
-      color: #3730a3;
-      font-size: 10px;
-      font-weight: 600;
-    }
-    .pill-danger { background: #fee2e2; color: #b91c1c; }
-    .pill-ok { background: #dcfce7; color: #15803d; }
-
-    .hidden-cols-bar {
-      padding: 0 24px 6px;
-      display: none;
-      flex-wrap: wrap;
-      gap: 4px;
-      font-size: 10px;
-      color: var(--text-muted);
-    }
-    .hidden-col-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 3px;
-      padding: 1px 7px;
-      border-radius: 999px;
-      background: #f3f4ff;
-      border: 1px dashed #c7d2fe;
-    }
-    .hidden-col-pill button {
-      border: none;
-      background: transparent;
-      font-size: 11px;
+      padding: 6px 14px;
+      font-size: 13px;
       cursor: pointer;
-      color: #4f46e5;
-    }
-
-    .table-wrapper { flex: 1; padding: 8px 16px 24px; }
-    .table-container {
-      border-radius: 12px;
-      background: #ffffff;
-      box-shadow: 0 6px 18px rgba(15,23,42,0.08);
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      min-height: 260px;
-    }
-    .table-scroll { overflow-x: auto; overflow-y: hidden; }
-
-    table {
-      border-collapse: separate;
-      border-spacing: 0;
-      min-width: 2200px;
-      font-size: 10px;
-      line-height: 1.3;
-    }
-    thead { background: linear-gradient(180deg, var(--bg-header), var(--bg-header2)); }
-
-    th, td {
-      padding: 3px 4px;
-      border-bottom: 1px solid var(--border);
-      border-right: 1px solid var(--border);
-      max-width: 110px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      text-align: center;
-    }
-    th {
-      position: sticky;
-      top: 0;
-      z-index: 2;
-      font-weight: 600;
-      color: var(--text-muted);
-      background: linear-gradient(180deg, var(--bg-header), var(--bg-header2));
-      cursor: grab;
-      user-select: none;
-    }
-    th.drag-over {
-      outline: 2px dashed #c7d2fe;
       background: #e5e7ff;
+      color: #374151;
     }
-    th .th-inner {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-    }
-    th .th-label {
-      font-size: 10px;
-    }
-    th .th-toggle {
-      border: none;
-      background: transparent;
-      font-size: 11px;
-      cursor: pointer;
-      color: #9ca3af;
-      padding: 0 2px;
-    }
-    th .th-toggle:hover {
-      color: #ef4444;
+    .nav-btn.active {
+      background: #4b6bff;
+      color: #ffffff;
     }
 
-    th:nth-child(1),
-    td:nth-child(1) {
-      position: sticky;
-      left: 0;
-      z-index: 3;
-      background: #f4f5ff;
-      box-shadow: 4px 0 6px rgba(15,23,42,0.05);
+    /* 一覧ページ（簡易） */
+    #pageList {
+      padding: 24px;
     }
 
-    tr:nth-child(even) td { background: var(--bg-row-alt); }
-    tbody tr:hover td { background: #f1f5ff; }
-
-    td img.product-image {
-      max-height: 48px;
-      border-radius: 6px;
-      display: block;
-      margin: 0 auto;
+    /* ===== 詳細ページ全体 ===== */
+    #pageDetail {
+      padding: 24px;
     }
-    td.input-cell input.asin-input {
+
+    /* 上段：画像｜右に「複数項目＋グラフ」 */
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 24px;
+      align-items: flex-start;
+    }
+
+    /* 画像ブロック */
+    .detail-image-box {
       width: 100%;
-      padding: 2px 4px;
-      font-size: 10px;
-      border-radius: 8px;
-      border: 1px solid var(--border);
-    }
-    td.readonly-cell { font-size: 10px; }
-
-    td.multi-line {
-      white-space: normal;
-      text-align: left;
-      line-height: 1.25;
-      font-size: 9px;
-    }
-
-    .sparkline-container {
-      width: 110px;
-      height: 40px;
-      cursor: pointer;
-    }
-    .sparkline-caption {
-      font-size: 8px;
-      color: var(--text-muted);
-      margin-top: 1px;
-    }
-
-    .row-delete-btn {
-      border: none;
-      background: transparent;
-      color: #9ca3af;
-      cursor: pointer;
-      font-size: 13px;
-      padding: 0 2px;
-    }
-    .row-delete-btn:hover { color: #ef4444; }
-
-    .table-footer {
-      padding: 5px 10px;
+      height: 380px;
+      border-radius: 24px;
+      background: radial-gradient(circle at top left,#eef1ff,#f6f7ff 60%,#ffffff);
+      box-shadow: 0 14px 30px rgba(15,23,42,0.16);
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-top: 1px solid var(--border);
-      background: #f9fafb;
-      font-size: 10px;
-      color: var(--text-muted);
-    }
-    .helper-text {
-      font-size: 10px;
-      color: var(--text-muted);
-      padding: 4px 8px 8px;
-    }
-
-    /* モーダル（一覧側の拡大グラフ） */
-    .modal-backdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(15,23,42,0.5);
-      display: none;
       align-items: center;
       justify-content: center;
-      z-index: 60;
     }
-    .modal-backdrop.open { display: flex; }
-    .modal {
-      background: #fff;
-      border-radius: 16px;
-      padding: 12px 16px 16px;
-      max-width: 900px;
-      width: 95%;
-      box-shadow: 0 20px 40px rgba(15,23,42,0.4);
-    }
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 6px;
-      font-size: 13px;
-      font-weight: 600;
-    }
-    .modal-subtitle {
-      font-size: 11px;
-      color: var(--text-muted);
-    }
-    .modal-close-btn {
-      border-radius: 999px;
-      border: 1px solid var(--border);
-      background: #f9fafb;
-      font-size: 11px;
-      padding: 2px 8px;
-      cursor: pointer;
-    }
-    .modal-close-btn:hover { background: #eef2ff; }
-    .modal-chart-container {
-      height: 360px;
-    }
-    .modal-toggle-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin: 4px 0 6px;
-      font-size: 11px;
-    }
-    .modal-toggle-row label {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      cursor: pointer;
-    }
-    .modal-toggle-row input[type="checkbox"] {
-      width: 13px;
-      height: 13px;
+    .detail-image-box img {
+      max-width: 92%;
+      max-height: 340px;
+      object-fit: contain;
+      border-radius: 18px;
+      background: #ffffff;
+      box-shadow: 0 8px 22px rgba(15,23,42,0.22);
     }
 
-    /* 2ページ目（詳細ビュー） 基本 */
-    .detail-page {
-      padding: 12px 18px 20px;
+    /* 右上：複数項目（基本情報） */
+    .detail-main-info {
+      background: #ffffff;
+      border-radius: 20px;
+      padding: 18px 20px 16px;
+      box-shadow: 0 10px 26px rgba(15,23,42,0.12);
     }
-
     .detail-brand {
-      font-size: 12px;
-      color: #6b7280;
+      font-size: 13px;
       text-transform: uppercase;
       letter-spacing: .08em;
+      color: #9ca3af;
     }
     .detail-title {
-      font-size: 18px;
+      font-size: 22px;
       font-weight: 650;
-      line-height: 1.4;
       margin-top: 4px;
     }
     .detail-rating {
-      font-size: 12px;
+      font-size: 13px;
       color: #f59e0b;
-      margin-top: 2px;
+      margin-top: 4px;
     }
     .detail-asin-line {
       font-size: 13px;
       margin-top: 6px;
     }
-    .asin-link {
+    .detail-asin-line a {
       color: #2563eb;
       text-decoration: none;
       font-weight: 600;
     }
-    .asin-link:hover { text-decoration: underline; }
-    .detail-cat {
-      margin-top: 8px;
-      font-size: 12px;
-      color: #6b7280;
-      line-height: 1.4;
+    .detail-asin-line a:hover {
+      text-decoration: underline;
     }
-    .detail-cat-label {
-      font-weight: 600;
+    .detail-cat {
+      margin-top: 10px;
+      font-size: 13px;
       color: #4b5563;
+      line-height: 1.5;
     }
     .detail-warning {
-      margin-top: 6px;
+      margin-top: 8px;
+      font-size: 12px;
+      color: #b45309;
+    }
+    .detail-warning span {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: #fef3c7;
     }
     .detail-meta-row {
-      margin-top: 8px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      font-size: 11px;
-      color: #6b7280;
-    }
-    .detail-meta-item {
-      padding: 3px 8px;
-      border-radius: 999px;
-      background: rgba(255,255,255,0.7);
-      border: 1px solid #e5e7eb;
-    }
-    .detail-toolbar {
-      margin-top: 14px;
-      font-size: 11px;
-      color: #6b7280;
+      margin-top: 10px;
       display: flex;
       flex-wrap: wrap;
       gap: 6px;
-      align-items: center;
+      font-size: 11px;
     }
-    .detail-toolbar input[type="text"] {
+    .meta-chip {
+      padding: 4px 9px;
+      border-radius: 999px;
+      background: #f3f4ff;
+      border: 1px solid #e0e7ff;
+      color: #4b5563;
+    }
+    .detail-toolbar {
+      margin-top: 10px;
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      font-size: 11px;
+      color: #6b7280;
+      flex-wrap: wrap;
+    }
+    .detail-toolbar input {
       border-radius: 999px;
       border: 1px solid #d4d8ea;
       padding: 3px 8px;
+      min-width: 120px;
       font-size: 11px;
-      min-width: 130px;
     }
     .detail-toolbar button {
       border-radius: 999px;
       border: none;
-      padding: 4px 9px;
+      padding: 4px 10px;
       font-size: 11px;
-      cursor: pointer;
       background: #4b6bff;
-      color: #fff;
+      color: #ffffff;
+      cursor: pointer;
     }
 
-    /* ▼ 2ページ目：左右2カラム構成 ▼ */
-    .detail-flex-row {
-      display: flex;
-      gap: 28px;
-      margin-top: 16px;
-    }
-    .detail-left {
-      width: 40%;
-      min-width: 420px;
-    }
-    .detail-right {
-      flex: 1;
-    }
-
-    .detail-image-wrap {
-      width: 100%;
-      height: 310px;
-      border-radius: 24px;
-      background: radial-gradient(circle at top left, #eef2ff, #f5f7ff 60%, #fdfdff);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 18px;
-      box-shadow: 0 16px 40px rgba(15,23,42,0.12);
-    }
-    .detail-image-wrap img {
-      max-height: 260px;
-      max-width: 90%;
-      object-fit: contain;
-      border-radius: 18px;
-      box-shadow: 0 10px 25px rgba(15,23,42,0.25);
-      background: #fff;
-    }
-    .detail-main {
-      position: relative;
-      z-index: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    /* グラフカード（右側） */
-    .graph-card {
+    /* 右下：グラフ */
+    .graph-box {
       background: #ffffff;
-      border-radius: 18px;
-      padding: 18px 22px 16px;
-      box-shadow: 0 10px 30px rgba(15,23,42,0.10);
+      border-radius: 20px;
+      padding: 16px 20px 14px;
+      margin-top: 16px;
+      box-shadow: 0 8px 22px rgba(15,23,42,0.12);
     }
     .graph-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 4px;
     }
     .graph-title {
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 600;
-      color: #1f2937;
     }
     .graph-sub {
       font-size: 11px;
       color: #6b7280;
     }
     .graph-toggle-row {
-      margin-top: 2px;
+      margin-top: 8px;
+      font-size: 12px;
       display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      font-size: 11px;
+      flex-direction: column;
+      gap: 2px;
     }
     .graph-toggle-row label {
       display: inline-flex;
@@ -554,1213 +202,515 @@
       height: 13px;
     }
     .graph-canvas-wrap {
-      margin-top: 6px;
-      height: 360px;
+      height: 340px;
+      margin-top: 8px;
     }
-    .keepa-link {
-      margin-top: 6px;
-      font-size: 11px;
+    .graph-canvas-wrap canvas {
+      width: 100% !important;
+      height: 340px !important;
     }
-    .keepa-link a {
-      color: #2563eb;
-      text-decoration: none;
-      padding: 2px 8px;
-      border-radius: 999px;
-      background: #e0e7ff;
-    }
-    .small-note {
+    .graph-note {
+      margin-top: 4px;
       font-size: 10px;
       color: #6b7280;
-      margin-top: 4px;
     }
 
-    /* 下段：カードを横スクロール */
-    .detail-metrics-scroll {
-      margin-top: 18px;
+    /* 下段：その他項目（横スクロール） */
+    .detail-bottom-scroll {
+      margin-top: 24px;
       overflow-x: auto;
-      padding-bottom: 8px;
     }
-    .detail-metrics-scroll::-webkit-scrollbar {
-      height: 6px;
+    .detail-bottom-scroll::-webkit-scrollbar {
+      height: 8px;
     }
-    .detail-metrics-scroll::-webkit-scrollbar-thumb {
-      background: #cbd5f5;
+    .detail-bottom-scroll::-webkit-scrollbar-thumb {
+      background: #c7d2fe;
       border-radius: 999px;
     }
-    .metrics-strip {
+    .bottom-strip {
       display: flex;
-      gap: 12px;
+      gap: 14px;
       min-width: 100%;
     }
-
     .info-card {
+      min-width: 260px;
+      max-width: 340px;
       background: #ffffff;
-      border-radius: 14px;
-      padding: 10px 12px;
-      box-shadow: 0 10px 30px rgba(15,23,42,0.08);
+      border-radius: 16px;
+      padding: 14px 16px;
+      box-shadow: 0 8px 20px rgba(15,23,42,0.10);
       display: flex;
       flex-direction: column;
       gap: 8px;
-      min-width: 260px;
-      max-width: 360px;
-      flex: 0 0 auto;
     }
     .info-card-title {
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 600;
-      color: #4b5563;
-      margin-bottom: 2px;
+      margin-bottom: 4px;
     }
     .chip-row {
       display: flex;
-      flex-wrap: wrap;
+      flex-direction: column;
       gap: 6px;
+      font-size: 12px;
     }
-    .chip {
-      min-width: 140px;
-      padding: 4px 6px;
-      border-radius: 10px;
+    .chip-item {
+      padding: 6px 8px;
+      border-radius: 9px;
       background: #f3f4ff;
       border: 1px solid #e0e7ff;
-      font-size: 11px;
-      display: flex;
-      flex-direction: column;
-      gap: 1px;
-    }
-    .chip-label {
-      font-size: 10px;
-      color: #6b7280;
-    }
-    .chip-value {
-      font-size: 12px;
-      font-weight: 600;
     }
 
-    @media (max-width: 1100px) {
-      .detail-flex-row {
-        flex-direction: column;
+    @media (max-width: 980px) {
+      .detail-grid {
+        grid-template-columns: 1fr;
       }
-      .detail-left {
-        width: 100%;
-        min-width: 0;
+      .detail-image-box {
+        height: 320px;
       }
-    }
-    @media (max-width: 960px) {
-      .detail-page {
-        padding-inline: 12px;
-      }
-    }
-
-    @media (max-width: 768px) {
-      header { flex-direction: column; align-items: flex-start; }
-      .toolbar { padding-inline: 16px; }
-      .toolbar input[type="text"] { min-width: 120px; flex: 1; }
-      .status { width: 100%; justify-content: flex-start; margin-left: 0; }
-      .asin-catalog, .hidden-cols-bar { padding-inline: 16px; }
-      .modal-chart-container { height: 260px; }
     }
   </style>
 </head>
 <body>
-<div class="app-shell">
-  <header>
-    <div>
-      <h1>MES-AI-A ASINダッシュボード</h1>
-      <div class="subtitle">ASINを入力すると、商品情報・利益予測・需給グラフ（180日）などを自動表示します。</div>
-    </div>
-    <div class="nav-switch-group">
-      <button id="btnGoList" class="nav-tab-btn active">1ページ目（一覧）</button>
-      <button id="btnGoDetail" class="nav-tab-btn">2ページ目（詳細）</button>
-      <div class="status" id="headerStatus"></div>
-    </div>
-  </header>
 
-  <!-- ======== 1ページ目：一覧 ======== -->
-  <div id="pageList">
-    <div class="toolbar">
-      <div class="toolbar-group">
-        <label for="globalAsinInput">ASIN:</label>
-        <input id="globalAsinInput" type="text" placeholder="例）B0A0000001" />
-        <button id="addRowFromAsinBtn" class="btn-primary">＋ 行を追加</button>
-        <button id="addEmptyRowBtn" class="btn-ghost">空行</button>
-      </div>
-    </div>
+<!-- ページ切り替え -->
+<div class="nav-bar">
+  <button id="btnList" class="nav-btn active">1ページ目（一覧）</button>
+  <button id="btnDetail" class="nav-btn">2ページ目（詳細）</button>
+</div>
 
-    <!-- 登録ASIN一覧 -->
-    <div class="asin-catalog" id="asinCatalog"></div>
-    <!-- 非表示列一覧 -->
-    <div class="hidden-cols-bar" id="hiddenColsBar"></div>
+<!-- 一覧ページ（ここは簡易版。あとでテーブルを差し替えてOK） -->
+<div id="pageList">
+  <h2>一覧ページ（仮）</h2>
+  <p>ここにMES-AI-Aの横長テーブルを入れてください。<br>
+    今は動作確認用としてシンプルな表示にしています。</p>
+  <p>
+    <button onclick="showPage('detail')">→ サンプルASINの詳細ページを開く</button>
+  </p>
+</div>
 
-    <!-- 一覧側：拡大グラフモーダル -->
-    <div id="demandModalBackdrop" class="modal-backdrop">
-      <div class="modal" onclick="event.stopPropagation()">
-        <div class="modal-header">
-          <div>
-            <div>需給推移グラフ（180日）</div>
-            <div class="modal-subtitle" id="demandModalSubtitle"></div>
-          </div>
-          <button id="demandModalCloseBtn" class="modal-close-btn">閉じる</button>
-        </div>
+<!-- 詳細ページ -->
+<div id="pageDetail" style="display:none;">
+  <div class="detail-page">
 
-        <div class="modal-toggle-row">
-          <label>
-            <input type="checkbox" id="chkDemandSupply">
-            《需要＆供給》（ランキング＋セラー数）
-          </label>
-          <label>
-            <input type="checkbox" id="chkSupplyPrice">
-            《供給＆価格》（セラー数＋価格）
-          </label>
-        </div>
+    <!-- 上段：画像｜右側に「複数項目＋グラフ」 -->
+    <div class="detail-grid">
 
-        <div class="modal-chart-container">
-          <canvas id="demandModalChart"></canvas>
-        </div>
-        <div class="modal-subtitle">
-          ※チェックボックスで表示する線を切り替えできます。ホバーで詳細数値を確認できます。
+      <!-- 画像 -->
+      <div>
+        <div class="detail-image-box">
+          <img id="detailHeroImage" src="" alt="Product image">
         </div>
       </div>
-    </div>
 
-    <div class="table-wrapper">
-      <div class="table-container">
-        <div class="table-scroll">
-          <table id="asinTable">
-            <thead>
-            <tr id="tableHeaderRow"></tr>
-            </thead>
-            <tbody id="tableBody"></tbody>
-          </table>
-        </div>
-        <div class="table-footer">
-          <div>左端の ASIN を入力すると自動で各項目が埋まります。×ボタンで行の削除も可能です。</div>
-          <div>ヘッダーをドラッグすると列の並び替え、ヘッダーの「−」で列を非表示にできます。</div>
-        </div>
-      </div>
-      <div class="helper-text">
-        ・実運用では ASIN_DATA をAPI連携などに差し替える想定です。<br>
-        ・需給推移列をクリックすると、拡大グラフが表示されます。
-      </div>
-    </div>
-  </div>
+      <!-- 右側：上＝基本情報・下＝グラフ -->
+      <div>
 
-  <!-- ======== 2ページ目：詳細ビュー（左：画像＆情報 / 右：グラフ） ======== -->
-  <div id="pageDetail" style="display:none;">
-    <div class="detail-page">
+        <!-- 基本情報（複数項目） -->
+        <div class="detail-main-info">
+          <div class="detail-brand" id="detailBrand"></div>
+          <div class="detail-title" id="detailTitle"></div>
+          <div class="detail-rating" id="detailRating"></div>
 
-      <!-- 上段：左右2カラム -->
-      <div class="detail-flex-row">
-
-        <!-- 左カラム：画像＋基本情報 -->
-        <div class="detail-left">
-          <div class="detail-image-wrap">
-            <img id="detailHeroImage" src="" alt="Product image">
+          <div class="detail-asin-line">
+            ASIN：
+            <a id="detailAsinLink" href="#" target="_blank" rel="noopener"></a>
           </div>
 
-          <div class="detail-main">
-            <div class="detail-brand" id="detailBrand"></div>
-            <div class="detail-title" id="detailTitle"></div>
-            <div class="detail-rating" id="detailRating"></div>
-            <div class="detail-asin-line">
-              ASIN： <a href="#" target="_blank" rel="noopener" id="detailAsinLink" class="asin-link"></a>
-            </div>
-            <div class="detail-cat" id="detailCategory"></div>
-            <div class="detail-warning" id="detailWarning"></div>
-            <div class="detail-meta-row" id="detailMetaRow"></div>
+          <div class="detail-cat" id="detailCategory"></div>
+          <div class="detail-warning" id="detailWarning"></div>
 
-            <div class="detail-toolbar">
-              <span>表示中のASINを変更：</span>
-              <input id="detailAsinInput" type="text" placeholder="例）B0A0000001">
-              <button id="detailAsinApplyBtn">更新</button>
-            </div>
+          <div class="detail-meta-row" id="detailMetaRow"></div>
+
+          <div class="detail-toolbar">
+            <span>表示するASIN：</span>
+            <input id="detailAsinInput" type="text" placeholder="B0A0000001">
+            <button id="detailAsinApplyBtn">更新</button>
           </div>
         </div>
 
-        <!-- 右カラム：グラフ -->
-        <div class="detail-right">
-          <div class="graph-card">
-            <div class="graph-header">
-              <div>
-                <div class="graph-title">需給推移（180日）</div>
-                <div class="graph-sub">ランキング / セラー数 / 価格</div>
-              </div>
-              <div class="graph-sub" id="detailGraphAsinLabel"></div>
+        <!-- グラフ -->
+        <div class="graph-box">
+          <div class="graph-header">
+            <div>
+              <div class="graph-title">需給推移（180日）</div>
+              <div class="graph-sub">ランキング / セラー数 / 価格</div>
             </div>
-            <div class="graph-toggle-row">
-              <label>
-                <input type="checkbox" id="detailChkDemandSupply" checked>
-                《需要＆供給》ランキング＋セラー数
-              </label>
-              <label>
-                <input type="checkbox" id="detailChkSupplyPrice">
-                《供給＆価格》セラー数＋価格
-              </label>
-            </div>
-            <div class="graph-canvas-wrap">
-              <canvas id="detailDemandChart"></canvas>
-            </div>
-            <div class="keepa-link" id="detailKeepaLink"></div>
-            <div class="small-note">
-              グラフ上にカーソルを合わせると、その時点の詳細な数値（ランキング・セラー数・価格）が表示されます。
-            </div>
+            <div class="graph-sub" id="detailGraphAsinLabel"></div>
+          </div>
+
+          <div class="graph-toggle-row">
+            <label>
+              <input type="checkbox" id="chkDemandSupply" checked>
+              《需要＆供給》（ランキング＋セラー数）
+            </label>
+            <label>
+              <input type="checkbox" id="chkSupplyPrice">
+              《供給＆価格》（セラー数＋価格）
+            </label>
+          </div>
+
+          <div class="graph-canvas-wrap">
+            <canvas id="detailGraph"></canvas>
+          </div>
+          <div class="graph-note">
+            グラフ上にカーソルを合わせると、その時点のランキング・セラー数・価格がツールチップで表示されます。
           </div>
         </div>
 
       </div>
+    </div>
 
-      <!-- 下段：カードを横スクロール -->
-      <div class="detail-metrics-scroll">
-        <div class="metrics-strip">
-
-          <div class="info-card">
-            <div class="info-card-title">利益・価格・在庫</div>
-            <div class="chip-row" id="detailChipRow1"></div>
-          </div>
-
-          <div class="info-card">
-            <div class="info-card-title">販売指標</div>
-            <div class="chip-row" id="detailChipRow2"></div>
-          </div>
-
-          <div class="info-card">
-            <div class="info-card-title">物流・コスト</div>
-            <div class="chip-row" id="detailChipRow3"></div>
-          </div>
-
+    <!-- 下段：その他項目を横並びスクロール -->
+    <div class="detail-bottom-scroll">
+      <div class="bottom-strip">
+        <div class="info-card">
+          <div class="info-card-title">利益・価格・在庫</div>
+          <div class="chip-row" id="detailChipRow1"></div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-title">販売指標</div>
+          <div class="chip-row" id="detailChipRow2"></div>
+        </div>
+        <div class="info-card">
+          <div class="info-card-title">物流・コスト</div>
+          <div class="chip-row" id="detailChipRow3"></div>
         </div>
       </div>
-
     </div>
+
   </div>
 </div>
 
 <script>
-  /* ========= ASINデータ（ダミー） ========= */
-  const ASIN_DATA = {
-    "B0A0000001": {
-      ASIN: "B0A0000001",
-      "商品画像": "https://via.placeholder.com/240x240?text=Toy+Set",
-      "品名": "スーパーアクションヒーロー 5体セット",
-      "注意事項（警告系）": "対象年齢6歳以上 / 小さな部品に注意",
-      "親カテゴリ": "Toys & Games",
-      "サブカテゴリ": "Action Figures",
-      "ブランド": "HeroWorks",
-      "レビュー評価": "★★★★☆ (523)",
-      "レビュー数推移グラフ": "",
-      "アメリカASIN": "B0A0000001",
-      "日本ASIN": "B0J0000001",
-      "JAN": "4900000000001",
-      "SKU": "HW-HERO-SET-5",
-      "個数": 1,
-      "粗利益率予測": "26%",
-      "入金額予測": "6,200円",
-      "粗利益予測": "1,612円",
-      "粗利益": "1,580円",
-      "粗利益率": "25%",
-      "販売額（ドル）": "$39.99",
-      "入金額（円）": "6,200円",
-      "入金額計（円）": "6,200円",
-      "需給推移": "",
-      "30日販売数": 95,
-      "90日販売数": 260,
-      "180日販売数": 510,
-      "予測30日販売数": 110,
-      "複数在庫指数45日分": "1.1",
-      "複数在庫指数60日分": "1.3",
-      "ライバル偏差1": "0.5",
-      "ライバル偏差2": "0.9",
-      "ライバル増加率": "12%",
-      "在庫数": 60,
-      "Keepaリンク": "https://keepa.com/#!product/1-B0A0000001",
-      "FBA出品": "はい",
-      "返品率": "1.8%",
-      "過去3月FBA最安値": "$35.90",
-      "カートボックス価格": "$39.99",
-      "FBA最安値": "$37.50",
-      "日本最安値": "¥6,780",
-      "日本FBA最安値": "¥6,980",
-      "日本自己発送最安値": "¥6,600",
-      "仕入れ目安単価": "¥3,700",
-      "仕入合計": "¥3,700",
-      "仕入計": "¥3,700",
-      "重量kg": "1.10",
-      "サイズ感": "中型",
-      "縦cm": 32,
-      "横cm": 26,
-      "高さcm": 8,
-      "容積重量": "1.20",
-      "材質": "プラスチック / 紙",
-      "大型": "いいえ",
-      "請求重量": "1.20kg",
-      "想定送料": "¥1,150",
-      "送料": "¥1,120",
-      "関税": "¥0"
-    },
-    "B0A0000002": {
-      ASIN: "B0A0000002",
-      "商品画像": "https://via.placeholder.com/240x240?text=Puzzle",
-      "品名": "ウルトラギャラクシーパズル 2000ピース",
-      "注意事項（警告系）": "対象年齢12歳以上",
-      "親カテゴリ": "Toys & Games",
-      "サブカテゴリ": "Jigsaw Puzzles",
-      "ブランド": "GalaxyMind",
-      "レビュー評価": "★★★★☆ (312)",
-      "レビュー数推移グラフ": "",
-      "アメリカASIN": "B0A0000002",
-      "日本ASIN": "B0J0000002",
-      "JAN": "4900000000002",
-      "SKU": "GM-PUZZLE-2000",
-      "個数": 1,
-      "粗利益率予測": "30%",
-      "入金額予測": "4,200円",
-      "粗利益予測": "1,260円",
-      "粗利益": "1,200円",
-      "粗利益率": "29%",
-      "販売額（ドル）": "$26.50",
-      "入金額（円）": "4,200円",
-      "入金額計（円）": "4,200円",
-      "需給推移": "",
-      "30日販売数": 70,
-      "90日販売数": 190,
-      "180日販売数": 370,
-      "予測30日販売数": 80,
-      "複数在庫指数45日分": "1.0",
-      "複数在庫指数60日分": "1.1",
-      "ライバル偏差1": "0.2",
-      "ライバル偏差2": "0.4",
-      "ライバル増加率": "5%",
-      "在庫数": 45,
-      "Keepaリンク": "https://keepa.com/#!product/1-B0A0000002",
-      "FBA出品": "はい",
-      "返品率": "1.1%",
-      "過去3月FBA最安値": "$24.99",
-      "カートボックス価格": "$26.50",
-      "FBA最安値": "$25.20",
-      "日本最安値": "¥3,980",
-      "日本FBA最安値": "¥4,280",
-      "日本自己発送最安値": "¥3,900",
-      "仕入れ目安単価": "¥2,500",
-      "仕入合計": "¥2,500",
-      "仕入計": "¥2,500",
-      "重量kg": "0.90",
-      "サイズ感": "小型",
-      "縦cm": 28,
-      "横cm": 22,
-      "高さcm": 6,
-      "容積重量": "0.75",
-      "材質": "紙",
-      "大型": "いいえ",
-      "請求重量": "0.90kg",
-      "想定送料": "¥900",
-      "送料": "¥880",
-      "関税": "¥0"
-    },
-    "B0A0000003": {
-      ASIN: "B0A0000003",
-      "商品画像": "https://via.placeholder.com/240x240?text=Board+Game",
-      "品名": "ストラテジーボードゲーム ネオ・シティ",
-      "注意事項（警告系）": "対象年齢10歳以上 / 3人〜5人用",
-      "親カテゴリ": "Toys & Games",
-      "サブカテゴリ": "Board Games",
-      "ブランド": "NeoPlay",
-      "レビュー評価": "★★★★★ (198)",
-      "レビュー数推移グラフ": "",
-      "アメリカASIN": "B0A0000003",
-      "日本ASIN": "B0J0000003",
-      "JAN": "4900000000003",
-      "SKU": "NP-BOARD-NEOCITY",
-      "個数": 1,
-      "粗利益率予測": "32%",
-      "入金額予測": "5,800円",
-      "粗利益予測": "1,856円",
-      "粗利益": "1,820円",
-      "粗利益率": "31%",
-      "販売額（ドル）": "$35.00",
-      "入金額（円）": "5,800円",
-      "入金額計（円）": "5,800円",
-      "需給推移": "",
-      "30日販売数": 55,
-      "90日販売数": 150,
-      "180日販売数": 290,
-      "予測30日販売数": 65,
-      "複数在庫指数45日分": "1.3",
-      "複数在庫指数60日分": "1.5",
-      "ライバル偏差1": "0.6",
-      "ライバル偏差2": "1.0",
-      "ライバル増加率": "10%",
-      "在庫数": 40,
-      "Keepaリンク": "https://keepa.com/#!product/1-B0A0000003",
-      "FBA出品": "はい",
-      "返品率": "1.6%",
-      "過去3月FBA最安値": "$32.00",
-      "カートボックス価格": "$35.00",
-      "FBA最安値": "$33.50",
-      "日本最安値": "¥5,980",
-      "日本FBA最安値": "¥6,280",
-      "日本自己発送最安値": "¥5,700",
-      "仕入れ目安単価": "¥3,200",
-      "仕入合計": "¥3,200",
-      "仕入計": "¥3,200",
-      "重量kg": "1.30",
-      "サイズ感": "中型",
-      "縦cm": 34,
-      "横cm": 26,
-      "高さcm": 7,
-      "容積重量": "1.40",
-      "材質": "紙 / プラスチック",
-      "大型": "いいえ",
-      "請求重量": "1.40kg",
-      "想定送料": "¥1,200",
-      "送料": "¥1,160",
-      "関税": "¥0"
-    }
-  };
+/* ==========================
+   ダミーのASINデータ
+   ========================== */
+const ASIN_DATA = {
+  "B0A0000001": {
+    asin: "B0A0000001",
+    title: "スーパーアクションヒーロー 5体セット",
+    brand: "HEROWORKS",
+    rating: "★★★★★ (523件)",
+    image: "https://via.placeholder.com/320x320?text=Product+image",
+    url: "https://www.amazon.com/dp/B0A0000001",
+    categoryParent: "Toys & Games",
+    categoryChild: "Action Figures",
+    warning: "対象年齢6歳以上 / 小さな部品に注意",
+    sku: "HW-HERO-SET-5",
+    jan: "4900000000001",
+    jpAsin: "B0J0000001",
+    fba: "はい",
+    price: 39.99,
+    profitRate: "26%",
+    profit: "1,612円",
+    stock: 60,
+    s30: 95,
+    s90: 260,
+    s180: 510,
+    pred30: 110,
+    size: "32×26×8 cm",
+    weight: 1.10,
+    shipping: "¥1,120",
+    tax: "¥0"
+  },
+  "B0A0000002": {
+    asin: "B0A0000002",
+    title: "ウルトラギャラクシーパズル 2000ピース",
+    brand: "GalaxyMind",
+    rating: "★★★★☆ (312件)",
+    image: "https://via.placeholder.com/320x320?text=Puzzle",
+    url: "https://www.amazon.com/dp/B0A0000002",
+    categoryParent: "Toys & Games",
+    categoryChild: "Jigsaw Puzzles",
+    warning: "対象年齢12歳以上",
+    sku: "GM-PUZZLE-2000",
+    jan: "4900000000002",
+    jpAsin: "B0J0000002",
+    fba: "はい",
+    price: 26.50,
+    profitRate: "30%",
+    profit: "1,260円",
+    stock: 45,
+    s30: 70,
+    s90: 190,
+    s180: 370,
+    pred30: 80,
+    size: "28×22×6 cm",
+    weight: 0.9,
+    shipping: "¥900",
+    tax: "¥0"
+  }
+};
 
-  /* ========= テーブル構造定義 ========= */
-  const BASE_COLUMNS = [
-    { id: "ASIN", label: "ASIN", type: "asinInput", visible: true },
-    { id: "商品画像", label: "商品画像", type: "image", visible: true },
-    { id: "品名", label: "品名", visible: true },
+/* ランダムっぽいグラフデータを生成 */
+function createSeries(seedText) {
+  let seed = 0;
+  for (let i = 0; i < seedText.length; i++) seed += seedText.charCodeAt(i);
+  function rnd() {
+    seed = (seed * 9301 + 49297) % 233280;
+    return seed / 233280;
+  }
 
-    { id: "親カテゴリ", label: "親カテゴリ", visible: false },
-    { id: "サブカテゴリ", label: "サブカテゴリ", visible: false },
-    { id: "カテゴリまとめ", label: "カテゴリ", type: "category", visible: true },
+  const days = 180;
+  const labels = [];
+  const rank = [];
+  const sellers = [];
+  const price = [];
 
-    { id: "ブランド", label: "ブランド", visible: true },
-    { id: "レビュー評価", label: "レビュー<br>評価", visible: true },
-    { id: "レビュー数推移グラフ", label: "レビュー数<br>推移グラフ", visible: false },
-    { id: "アメリカASIN", label: "アメリカ<br>ASIN", visible: true },
-    { id: "日本ASIN", label: "日本ASIN", visible: false },
-    { id: "JAN", label: "JAN", visible: false },
-    { id: "SKU", label: "SKU", visible: false },
-    { id: "個数", label: "個数", visible: true },
-    { id: "粗利益率予測", label: "粗利益率<br>予測", visible: true },
-    { id: "入金額予測", label: "入金額<br>予測", visible: true },
-    { id: "粗利益予測", label: "粗利益<br>予測", visible: true },
-    { id: "粗利益", label: "粗利益", visible: false },
-    { id: "粗利益率", label: "粗利益率", visible: false },
-    { id: "販売額（ドル）", label: "販売額（ドル）", visible: true },
-    { id: "入金額（円）", label: "入金額（円）", visible: true },
-    { id: "入金額計（円）", label: "入金額計（円）", visible: false },
-    {
-      id: "需給推移",
-      label: "需給推移<br>□《需要＆供給》<br>□《供給＆価格》",
-      visible: true
-    },
-    { id: "30日販売数", label: "30日<br>販売数", visible: true },
-    { id: "90日販売数", label: "90日<br>販売数", visible: false },
-    { id: "180日販売数", label: "180日<br>販売数", visible: false },
-    { id: "予測30日販売数", label: "予測<br>30日<br>販売数", visible: true },
+  let r = 60000;
+  let s = 5;
+  let p = 35;
 
-    { id: "複数在庫指数45日分", label: "複数在庫指数45", visible: false },
-    { id: "複数在庫指数60日分", label: "複数在庫指数60", visible: false },
-    { id: "複数在庫指数まとめ", label: "複数在庫指数", type: "multiIndex", visible: true },
+  for (let i = 0; i < days; i++) {
+    labels.push(`${i + 1}日`);
+    r += (rnd() - 0.5) * 4000;
+    r = Math.max(5000, Math.min(80000, r));
+    s += (rnd() - 0.5) * 2;
+    s = Math.max(1, Math.min(20, s));
+    p += (rnd() - 0.5) * 1.6;
+    p = Math.max(10, Math.min(80, p));
+    rank.push(Math.round(r));
+    sellers.push(Number(s.toFixed(1)));
+    price.push(Number(p.toFixed(2)));
+  }
+  return { labels, rank, sellers, price };
+}
 
-    { id: "ライバル偏差1", label: "ライバル偏差×1", visible: false },
-    { id: "ライバル偏差2", label: "ライバル偏差×2", visible: false },
-    { id: "ライバル偏差まとめ", label: "ライバル偏差", type: "rivalBias", visible: true },
+/* ==========================
+   ページ切り替え
+   ========================== */
+const pageList = document.getElementById("pageList");
+const pageDetail = document.getElementById("pageDetail");
+const btnList = document.getElementById("btnList");
+const btnDetail = document.getElementById("btnDetail");
 
-    { id: "ライバル増加率", label: "ライバル<br>増加率", visible: false },
-    { id: "在庫数", label: "在庫数", visible: true },
-    { id: "Keepaリンク", label: "Keepa<br>(アメリカAmazon)", visible: true },
-    { id: "FBA出品", label: "FBA出品", visible: true },
-    { id: "返品率", label: "返品率", visible: false },
-    { id: "過去3月FBA最安値", label: "過去3月<br>FBA最安値", visible: false },
-    { id: "カートボックス価格", label: "カートボックス<br>価格", visible: true },
-    { id: "FBA最安値", label: "FBA最安値", visible: false },
-    { id: "日本最安値", label: "日本最安値", visible: false },
-    { id: "日本FBA最安値", label: "日本FBA<br>最安値", visible: false },
-    { id: "日本自己発送最安値", label: "日本自己<br>発送最安値", visible: false },
-    { id: "仕入れ目安単価", label: "仕入れ<br>目安単価", visible: true },
-    { id: "仕入合計", label: "仕入合計", visible: false },
-    { id: "仕入計", label: "仕入計", visible: false },
-    { id: "重量kg", label: "重量<br>（kg）", visible: true },
+function showPage(which) {
+  if (which === "detail") {
+    pageList.style.display = "none";
+    pageDetail.style.display = "block";
+    btnList.classList.remove("active");
+    btnDetail.classList.add("active");
+    // デフォルト ASIN
+    renderDetail("B0A0000001");
+  } else {
+    pageList.style.display = "block";
+    pageDetail.style.display = "none";
+    btnDetail.classList.remove("active");
+    btnList.classList.add("active");
+  }
+}
+btnList.addEventListener("click", () => showPage("list"));
+btnDetail.addEventListener("click", () => showPage("detail"));
 
-    { id: "サイズまとめ", label: "サイズ<br>(縦×横×高さ)", type: "size", visible: true },
-    { id: "サイズ感", label: "サイズ感", visible: false },
-    { id: "縦cm", label: "縦cm", visible: false },
-    { id: "横cm", label: "横cm", visible: false },
-    { id: "高さcm", label: "高さcm", visible: false },
+/* ==========================
+   詳細ページの描画
+   ========================== */
+const imgEl = document.getElementById("detailHeroImage");
+const brandEl = document.getElementById("detailBrand");
+const titleEl = document.getElementById("detailTitle");
+const ratingEl = document.getElementById("detailRating");
+const asinLinkEl = document.getElementById("detailAsinLink");
+const catEl = document.getElementById("detailCategory");
+const warnEl = document.getElementById("detailWarning");
+const metaRowEl = document.getElementById("detailMetaRow");
+const chip1El = document.getElementById("detailChipRow1");
+const chip2El = document.getElementById("detailChipRow2");
+const chip3El = document.getElementById("detailChipRow3");
+const graphAsinLabel = document.getElementById("detailGraphAsinLabel");
+const detailAsinInput = document.getElementById("detailAsinInput");
+const detailAsinApplyBtn = document.getElementById("detailAsinApplyBtn");
+const chkDemandSupply = document.getElementById("chkDemandSupply");
+const chkSupplyPrice = document.getElementById("chkSupplyPrice");
 
-    { id: "容積重量", label: "容積重量", visible: false },
-    { id: "材質", label: "材質", visible: false },
-    { id: "大型", label: "大型", visible: false },
-    { id: "請求重量", label: "請求重量", visible: false },
-    { id: "想定送料", label: "想定送料", visible: true },
-    { id: "送料", label: "送料", visible: false },
-    { id: "関税", label: "関税", visible: false },
-    { id: "_ROW_ACTIONS", label: " ", type: "rowActions", visible: true }
+let detailChart = null;
+
+function renderDetail(asinRaw) {
+  const asin = (asinRaw || "").trim().toUpperCase();
+  const data = ASIN_DATA[asin] || ASIN_DATA["B0A0000001"];
+  if (!data) return;
+
+  imgEl.src = data.image;
+  brandEl.textContent = data.brand;
+  titleEl.textContent = data.title;
+  ratingEl.textContent = data.rating;
+  asinLinkEl.textContent = data.asin;
+  asinLinkEl.href = data.url;
+  catEl.innerHTML =
+    `【カテゴリ】<br>親：${data.categoryParent}<br>子：${data.categoryChild}`;
+  warnEl.innerHTML = data.warning ? `<span>${data.warning}</span>` : "";
+
+  metaRowEl.innerHTML = "";
+  const metaItems = [
+    `SKU: ${data.sku}`,
+    `JAN: ${data.jan}`,
+    `日本ASIN: ${data.jpAsin}`,
+    `FBA出品: ${data.fba}`
   ];
-  let columns = BASE_COLUMNS.map(c => ({ ...c }));
+  metaItems.forEach(t => {
+    const span = document.createElement("span");
+    span.className = "meta-chip";
+    span.textContent = t;
+    metaRowEl.appendChild(span);
+  });
 
-  const headerRow = document.getElementById("tableHeaderRow");
-  const tbody = document.getElementById("tableBody");
-  const headerStatus = document.getElementById("headerStatus");
-  const asinCatalog = document.getElementById("asinCatalog");
-  const hiddenColsBar = document.getElementById("hiddenColsBar");
+  chip1El.innerHTML = `
+    <div class="chip-item">販売額（ドル）：$${data.price}</div>
+    <div class="chip-item">粗利益率：${data.profitRate}</div>
+    <div class="chip-item">粗利益：${data.profit}</div>
+    <div class="chip-item">在庫数：${data.stock}</div>
+  `;
+  chip2El.innerHTML = `
+    <div class="chip-item">30日販売数：${data.s30}</div>
+    <div class="chip-item">90日販売数：${data.s90}</div>
+    <div class="chip-item">180日販売数：${data.s180}</div>
+    <div class="chip-item">予測30日販売数：${data.pred30}</div>
+  `;
+  chip3El.innerHTML = `
+    <div class="chip-item">サイズ：${data.size}</div>
+    <div class="chip-item">重量：${data.weight} kg</div>
+    <div class="chip-item">送料：${data.shipping}</div>
+    <div class="chip-item">関税：${data.tax}</div>
+  `;
 
-  const demandModalBackdrop = document.getElementById("demandModalBackdrop");
-  const demandModalCloseBtn = document.getElementById("demandModalCloseBtn");
-  const demandModalSubtitle = document.getElementById("demandModalSubtitle");
-  const demandModalChartCanvas = document.getElementById("demandModalChart");
-  const chkDemandSupply = document.getElementById("chkDemandSupply");
-  const chkSupplyPrice = document.getElementById("chkSupplyPrice");
-  let demandModalChartInstance = null;
+  graphAsinLabel.textContent = `ASIN: ${data.asin}`;
+  detailAsinInput.value = data.asin;
 
-  const globalInput = document.getElementById("globalAsinInput");
-  const addRowFromAsinBtn = document.getElementById("addRowFromAsinBtn");
-  const addEmptyRowBtn = document.getElementById("addEmptyRowBtn");
+  const series = createSeries(data.asin);
+  drawDetailChart(series);
 
-  const pageList = document.getElementById("pageList");
-  const pageDetail = document.getElementById("pageDetail");
-  const btnGoList = document.getElementById("btnGoList");
-  const btnGoDetail = document.getElementById("btnGoDetail");
+  chkDemandSupply.checked = true;
+  chkSupplyPrice.checked = false;
+  applyDetailCheckbox();
+}
 
-  let dragColId = null;
+function drawDetailChart(series) {
+  const ctx = document.getElementById("detailGraph").getContext("2d");
+  if (detailChart) detailChart.destroy();
 
-  function visibleColumns() { return columns.filter(c => c.visible !== false); }
-
-  /* ==== 疑似乱数＋需給データ ==== */
-  function createPRNG(seedStr) {
-    let seed = 0;
-    for (let i = 0; i < seedStr.length; i++) seed += seedStr.charCodeAt(i);
-    return function () {
-      seed = (seed * 9301 + 49297) % 233280;
-      return seed / 233280;
-    };
-  }
-  function getDemandSupplySeries(asin) {
-    const rand = createPRNG(asin);
-    const days = 180;
-    const labels = [];
-    const ranking = [];
-    const sellers = [];
-    const price = [];
-    let rank = 60000 * (0.6 + rand() * 0.4);
-    let seller = 5 + Math.round(rand() * 5);
-    let p = 25 + rand() * 30;
-
-    for (let i = 0; i < days; i++) {
-      labels.push(`${180 - i}日前`);
-      rank += (rand() - 0.5) * 4000;
-      rank = Math.max(5000, Math.min(80000, rank));
-      seller += (rand() - 0.5) * 2;
-      seller = Math.max(1, Math.min(25, seller));
-      p += (rand() - 0.5) * 2;
-      p = Math.max(10, Math.min(80, p));
-      ranking.push(Math.round(rank));
-      sellers.push(Number(seller.toFixed(1)));
-      price.push(Number(p.toFixed(2)));
-    }
-    return { labels, ranking, sellers, price };
-  }
-
-  /* ==== ヘッダー生成 ==== */
-  function buildHeader() {
-    headerRow.innerHTML = "";
-    visibleColumns().forEach(col => {
-      const th = document.createElement("th");
-      th.dataset.colId = col.id;
-      th.draggable = col.id !== "_ROW_ACTIONS";
-
-      const inner = document.createElement("div");
-      inner.className = "th-inner";
-
-      const labelSpan = document.createElement("span");
-      labelSpan.className = "th-label";
-      labelSpan.innerHTML = col.label;
-      inner.appendChild(labelSpan);
-
-      if (col.id !== "ASIN" && col.id !== "_ROW_ACTIONS") {
-        const toggleBtn = document.createElement("button");
-        toggleBtn.className = "th-toggle";
-        toggleBtn.textContent = "−";
-        toggleBtn.title = "この列を非表示にする";
-        toggleBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          col.visible = false;
-          rebuildTableFromCurrentRows();
-          renderHiddenColsBar();
-        });
-        inner.appendChild(toggleBtn);
-      }
-
-      th.appendChild(inner);
-      headerRow.appendChild(th);
-
-      if (th.draggable) {
-        th.addEventListener("dragstart", (e) => {
-          dragColId = col.id;
-          e.dataTransfer.effectAllowed = "move";
-        });
-        th.addEventListener("dragover", (e) => {
-          e.preventDefault();
-          th.classList.add("drag-over");
-          e.dataTransfer.dropEffect = "move";
-        });
-        th.addEventListener("dragleave", () => {
-          th.classList.remove("drag-over");
-        });
-        th.addEventListener("drop", (e) => {
-          e.preventDefault();
-          th.classList.remove("drag-over");
-          const targetId = col.id;
-          if (!dragColId || dragColId === targetId) return;
-          const srcIndex = columns.findIndex(c => c.id === dragColId);
-          const dstIndex = columns.findIndex(c => c.id === targetId);
-          if (srcIndex === -1 || dstIndex === -1) return;
-          const [moved] = columns.splice(srcIndex, 1);
-          columns.splice(dstIndex, 0, moved);
-          dragColId = null;
-          rebuildTableFromCurrentRows();
-          renderHiddenColsBar();
-        });
-      }
-    });
-  }
-
-  function createRow(presetAsin = "") {
-    const tr = document.createElement("tr");
-    visibleColumns().forEach(col => {
-      const td = document.createElement("td");
-      td.dataset.colId = col.id;
-
-      if (col.type === "asinInput") {
-        td.classList.add("input-cell");
-        const input = document.createElement("input");
-        input.type = "text";
-        input.className = "asin-input";
-        input.placeholder = "ASIN";
-        input.value = presetAsin;
-        input.addEventListener("change", () => handleAsinChange(tr, input.value));
-        input.addEventListener("blur", () => handleAsinChange(tr, input.value));
-        input.addEventListener("keydown", (e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            handleAsinChange(tr, input.value);
-          }
-        });
-        td.appendChild(input);
-      } else if (col.type === "rowActions") {
-        const btn = document.createElement("button");
-        btn.className = "row-delete-btn";
-        btn.innerHTML = "×";
-        btn.title = "この行を削除";
-        btn.addEventListener("click", () => tr.remove());
-        td.appendChild(btn);
-      } else {
-        td.classList.add("readonly-cell");
-      }
-
-      tr.appendChild(td);
-    });
-
-    tbody.appendChild(tr);
-    if (presetAsin) handleAsinChange(tr, presetAsin);
-    return tr;
-  }
-
-  function handleAsinChange(row, rawAsin) {
-    const asin = String(rawAsin || "").trim().toUpperCase();
-    const data = ASIN_DATA[asin];
-
-    const asinInputCell = row.querySelector('td[data-col-id="ASIN"] input.asin-input');
-    if (asinInputCell && asinInputCell.value !== asin) {
-      asinInputCell.value = asin;
-    }
-
-    if (!data) {
-      visibleColumns().forEach(col => {
-        if (col.id === "ASIN" || col.type === "rowActions") return;
-        const cell = row.querySelector(`td[data-col-id="${col.id}"]`);
-        if (!cell) return;
-        cell.innerHTML = "";
-      });
-      row.dataset.loaded = "false";
-      return;
-    }
-
-    visibleColumns().forEach(col => {
-      if (col.id === "ASIN" || col.type === "rowActions") return;
-      const cell = row.querySelector(`td[data-col-id="${col.id}"]`);
-      if (!cell) return;
-
-      if (col.type === "category") {
-        cell.classList.add("multi-line");
-        const parent = data["親カテゴリ"] || "-";
-        const child = data["サブカテゴリ"] || "-";
-        cell.innerHTML = `【カテゴリ】<br>親：${parent}<br>子：${child}`;
-        return;
-      }
-      if (col.type === "multiIndex") {
-        cell.classList.add("multi-line");
-        const v45 = data["複数在庫指数45日分"] ?? "-";
-        const v60 = data["複数在庫指数60日分"] ?? "-";
-        cell.innerHTML = `【複数在庫指数】<br>45日：${v45}<br>60日：${v60}`;
-        return;
-      }
-      if (col.type === "rivalBias") {
-        cell.classList.add("multi-line");
-        const v1 = data["ライバル偏差1"] ?? "-";
-        const v2 = data["ライバル偏差2"] ?? "-";
-        cell.innerHTML = `【ライバル偏差】<br>×1：${v1}<br>×2：${v2}`;
-        return;
-      }
-      if (col.type === "size") {
-        const v = data["縦cm"];
-        const h = data["横cm"];
-        const t = data["高さcm"];
-        if (v != null && h != null && t != null) cell.textContent = `${v}×${h}×${t}`;
-        else cell.textContent = "";
-        return;
-      }
-
-      const value = data[col.id] ?? "";
-
-      if (col.type === "image") {
-        cell.innerHTML = "";
-        if (value) {
-          const img = document.createElement("img");
-          img.src = value;
-          img.alt = data["品名"] || asin;
-          img.className = "product-image";
-          cell.appendChild(img);
+  detailChart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: series.labels,
+      datasets: [
+        {
+          label: "ランキング（小さいほど上位）",
+          data: series.rank,
+          borderColor: "#60a5fa",
+          tension: 0.25,
+          borderWidth: 2,
+          pointRadius: 0,
+          yAxisID: "yRank"
+        },
+        {
+          label: "セラー数",
+          data: series.sellers,
+          borderColor: "#22c55e",
+          tension: 0.25,
+          borderWidth: 2,
+          pointRadius: 0,
+          yAxisID: "ySeller"
+        },
+        {
+          label: "価格（USD）",
+          data: series.price,
+          borderColor: "#f97316",
+          tension: 0.25,
+          borderWidth: 2,
+          pointRadius: 0,
+          yAxisID: "yPrice"
         }
-      } else if (col.id === "FBA出品") {
-        cell.innerHTML = "";
-        if (value) {
-          const pill = document.createElement("span");
-          pill.className = "pill " + (String(value).includes("はい") ? "pill-ok" : "pill-danger");
-          pill.textContent = value;
-          cell.appendChild(pill);
-        }
-      } else if (col.id === "Keepaリンク") {
-        cell.innerHTML = "";
-        if (value) {
-          const a = document.createElement("a");
-          a.href = value;
-          a.target = "_blank";
-          a.rel = "noopener noreferrer";
-          a.textContent = "Keepa";
-          a.className = "pill";
-          cell.appendChild(a);
-        }
-      } else if (col.id === "需給推移") {
-        cell.innerHTML = "";
-        renderDemandSparkline(cell, asin);
-      } else {
-        cell.textContent = value;
-      }
-    });
-
-    row.dataset.loaded = "true";
-  }
-
-  function getCurrentRowAsins() {
-    return Array.from(tbody.querySelectorAll("tr")).map(tr => {
-      const input = tr.querySelector('td[data-col-id="ASIN"] input.asin-input');
-      return input ? String(input.value || "").trim().toUpperCase() : "";
-    });
-  }
-
-  function rebuildTableFromCurrentRows() {
-    const asins = getCurrentRowAsins();
-    tbody.innerHTML = "";
-    buildHeader();
-    asins.forEach(asin => createRow(asin));
-  }
-
-  /* ==== ミニグラフ ==== */
-  function renderDemandSparkline(cell, asin) {
-    if (!ASIN_DATA[asin]) {
-      cell.textContent = "";
-      return;
-    }
-    const container = document.createElement("div");
-    container.className = "sparkline-container";
-
-    const canvas = document.createElement("canvas");
-    canvas.width = 110;
-    canvas.height = 40;
-    container.appendChild(canvas);
-
-    const caption = document.createElement("div");
-      caption.className = "sparkline-caption";
-      caption.textContent = "Rank / Seller / Price";
-      cell.appendChild(container);
-      cell.appendChild(caption);
-
-    const data = getDemandSupplySeries(asin);
-
-    new Chart(canvas.getContext("2d"), {
-      type: "line",
-      data: {
-        labels: data.labels,
-        datasets: [
-          { label: "ランキング", data: data.ranking, borderWidth: 1, pointRadius: 0, tension: 0.2, borderColor: "#60a5fa", yAxisID: "yRank" },
-          { label: "セラー数", data: data.sellers, borderWidth: 1, pointRadius: 0, tension: 0.2, borderColor: "#22c55e", yAxisID: "ySeller" },
-          { label: "価格", data: data.price, borderWidth: 1, pointRadius: 0, tension: 0.2, borderColor: "#f97316", yAxisID: "yPrice" }
-        ]
-      },
-      options: {
-        responsive: false,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false }, tooltip: { enabled: false } },
-        scales: {
-          x: { display: false },
-          yRank: { display: false },
-          ySeller: { display: false },
-          yPrice: { display: false }
-        }
-      }
-    });
-
-    container.addEventListener("click", () => openDemandModal(asin, data));
-  }
-
-  /* ==== 一覧モーダル ==== */
-  function applyModalCheckboxVisibility() {
-    if (!demandModalChartInstance) return;
-    const ds = demandModalChartInstance.data.datasets;
-
-    let showRank = true;
-    let showSeller = true;
-    let showPrice = true;
-
-    const demandOn = chkDemandSupply.checked;
-    const supplyPriceOn = chkSupplyPrice.checked;
-
-    if (demandOn && !supplyPriceOn) {
-      showRank = true; showSeller = true; showPrice = false;
-    } else if (!demandOn && supplyPriceOn) {
-      showRank = false; showSeller = true; showPrice = true;
-    } else if (demandOn && supplyPriceOn) {
-      showRank = true; showSeller = true; showPrice = true;
-    } else {
-      showRank = true; showSeller = true; showPrice = true;
-    }
-
-    ds[0].hidden = !showRank;
-    ds[1].hidden = !showSeller;
-    ds[2].hidden = !showPrice;
-
-    demandModalChartInstance.update();
-  }
-
-  function openDemandModal(asin, data) {
-    const asinData = ASIN_DATA[asin];
-    demandModalSubtitle.textContent = `ASIN: ${asin}　${asinData ? asinData["品名"] : ""}`;
-    demandModalBackdrop.classList.add("open");
-
-    if (demandModalChartInstance) {
-      demandModalChartInstance.destroy();
-      demandModalChartInstance = null;
-    }
-    const ctx = demandModalChartCanvas.getContext("2d");
-    demandModalChartInstance = new Chart(ctx, {
-      type: "line",
-      data: {
-        labels: data.labels,
-        datasets: [
-          { label: "ランキング（小さいほど上位）", data: data.ranking, borderWidth: 2, pointRadius: 0, tension: 0.25, borderColor: "#60a5fa", yAxisID: "yRank" },
-          { label: "セラー数", data: data.sellers, borderWidth: 2, pointRadius: 0, tension: 0.25, borderColor: "#22c55e", yAxisID: "ySeller" },
-          { label: "価格（USD）", data: data.price, borderWidth: 2, pointRadius: 0, tension: 0.25, borderColor: "#f97316", yAxisID: "yPrice" }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { mode: "index", intersect: false },
-        plugins: {
-          legend: { position: "top" },
-          tooltip: {
-            callbacks: {
-              label: (ctx) => {
-                const label = ctx.dataset.label || "";
-                if (ctx.dataset.yAxisID === "yPrice") return `${label}: $${ctx.parsed.y.toFixed(2)}`;
-                return `${label}: ${ctx.parsed.y}`;
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { position: "top" },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const label = ctx.dataset.label || "";
+              if (ctx.dataset.yAxisID === "yPrice") {
+                return `${label}: $${ctx.parsed.y.toFixed(2)}`;
               }
+              return `${label}: ${ctx.parsed.y}`;
             }
           }
-        },
-        scales: {
-          x: { display: true, ticks: { maxTicksLimit: 12 } },
-          yRank: { type: "linear", position: "left", reverse: true, title: { display: true, text: "ランキング" } },
-          ySeller: { type: "linear", position: "right", title: { display: true, text: "セラー数" }, grid: { drawOnChartArea: false } },
-          yPrice: { type: "linear", position: "right", offset: true, title: { display: true, text: "価格(USD)" }, grid: { drawOnChartArea: false } }
         }
-      }
-    });
-
-    chkDemandSupply.checked = true;
-    chkSupplyPrice.checked = false;
-    applyModalCheckboxVisibility();
-  }
-
-  demandModalBackdrop.addEventListener("click", () => {
-    demandModalBackdrop.classList.remove("open");
-  });
-  demandModalCloseBtn.addEventListener("click", () => {
-    demandModalBackdrop.classList.remove("open");
-  });
-  chkDemandSupply.addEventListener("change", applyModalCheckboxVisibility);
-  chkSupplyPrice.addEventListener("change", applyModalCheckboxVisibility);
-
-  /* ==== 非表示列バー ==== */
-  function renderHiddenColsBar() {
-    const hiddenCols = columns.filter(c => !c.visible && c.id !== "ASIN" && c.id !== "_ROW_ACTIONS");
-    hiddenColsBar.innerHTML = "";
-    if (!hiddenCols.length) {
-      hiddenColsBar.style.display = "none";
-      return;
-    }
-    hiddenColsBar.style.display = "flex";
-    hiddenCols.forEach(col => {
-      const pill = document.createElement("div");
-      pill.className = "hidden-col-pill";
-      pill.innerHTML = `<span>${col.id}</span>`;
-      const btn = document.createElement("button");
-      btn.textContent = "＋";
-      btn.title = "この列を再表示";
-      btn.addEventListener("click", () => {
-        col.visible = true;
-        rebuildTableFromCurrentRows();
-        renderHiddenColsBar();
-      });
-      pill.appendChild(btn);
-      hiddenColsBar.appendChild(pill);
-    });
-  }
-
-  /* ==== ASIN一覧・ステータス ==== */
-  function buildAsinCatalogAndStatus() {
-    const asins = Object.keys(ASIN_DATA || {});
-    headerStatus.textContent = `登録ASIN数：${asins.length}件`;
-    asinCatalog.innerHTML = "";
-    if (!asins.length) return;
-    const label = document.createElement("span");
-    label.className = "asin-catalog-label";
-    label.textContent = "データがあるASIN：";
-    asinCatalog.appendChild(label);
-    asins.forEach(a => {
-      const span = document.createElement("span");
-      span.className = "pill";
-      span.textContent = a;
-      asinCatalog.appendChild(span);
-    });
-  }
-
-  /* ==== 2ページ目：詳細ビューの描画 ==== */
-  const detailHeroImage = document.getElementById("detailHeroImage");
-  const detailBrand = document.getElementById("detailBrand");
-  const detailTitle = document.getElementById("detailTitle");
-  const detailRating = document.getElementById("detailRating");
-  const detailAsinLink = document.getElementById("detailAsinLink");
-  const detailCategory = document.getElementById("detailCategory");
-  const detailWarning = document.getElementById("detailWarning");
-  const detailMetaRow = document.getElementById("detailMetaRow");
-  const detailChipRow1 = document.getElementById("detailChipRow1");
-  const detailChipRow2 = document.getElementById("detailChipRow2");
-  const detailChipRow3 = document.getElementById("detailChipRow3");
-  const detailGraphAsinLabel = document.getElementById("detailGraphAsinLabel");
-  const detailKeepaLink = document.getElementById("detailKeepaLink");
-  const detailAsinInput = document.getElementById("detailAsinInput");
-  const detailAsinApplyBtn = document.getElementById("detailAsinApplyBtn");
-  const detailChkDemandSupply = document.getElementById("detailChkDemandSupply");
-  const detailChkSupplyPrice = document.getElementById("detailChkSupplyPrice");
-  const detailDemandChartCanvas = document.getElementById("detailDemandChart");
-  let detailDemandChart = null;
-
-  function addChip(rowEl, label, value) {
-    const chip = document.createElement("div");
-    chip.className = "chip";
-    const l = document.createElement("div");
-    l.className = "chip-label";
-    l.textContent = label;
-    const v = document.createElement("div");
-    v.className = "chip-value";
-    v.textContent = value || "-";
-    chip.appendChild(l); chip.appendChild(v);
-    rowEl.appendChild(chip);
-  }
-
-  function renderDetailPage(asinRaw) {
-    const asin = (asinRaw || "").toUpperCase();
-    const data = ASIN_DATA[asin] || ASIN_DATA[Object.keys(ASIN_DATA)[0]];
-    if (!data) return;
-
-    detailHeroImage.src = data["商品画像"] || "https://via.placeholder.com/240x240?text=No+Image";
-    detailBrand.textContent = data["ブランド"] || "";
-    detailTitle.textContent = data["品名"] || "";
-    detailRating.textContent = data["レビュー評価"] || "";
-    detailAsinLink.textContent = data["アメリカASIN"] || data.ASIN;
-    detailAsinLink.href = `https://www.amazon.com/dp/${data["アメリカASIN"] || data.ASIN}`;
-    detailCategory.innerHTML =
-      `<span class="detail-cat-label">【カテゴリ】</span><br>` +
-      `親：${data["親カテゴリ"] || "-"}<br>` +
-      `子：${data["サブカテゴリ"] || "-"}`;
-
-    detailWarning.innerHTML = "";
-    if (data["注意事項（警告系）"]) {
-      const span = document.createElement("span");
-      span.className = "pill";
-      span.textContent = data["注意事項（警告系）"];
-      detailWarning.appendChild(span);
-    }
-
-    detailMetaRow.innerHTML = "";
-    [["SKU", data["SKU"]],["JAN", data["JAN"]],["日本ASIN", data["日本ASIN"]],["FBA出品", data["FBA出品"]]].forEach(([label,val])=>{
-      if (!val) return;
-      const div = document.createElement("div");
-      div.className = "detail-meta-item";
-      div.textContent = `${label}: ${val}`;
-      detailMetaRow.appendChild(div);
-    });
-
-    detailAsinInput.value = data.ASIN;
-    detailChipRow1.innerHTML = "";
-    detailChipRow2.innerHTML = "";
-    detailChipRow3.innerHTML = "";
-
-    addChip(detailChipRow1, "販売額（ドル）", data["販売額（ドル）"]);
-    addChip(detailChipRow1, "カートボックス価格", data["カートボックス価格"]);
-    addChip(detailChipRow1, "粗利益率予測", data["粗利益率予測"]);
-    addChip(detailChipRow1, "粗利益予測", data["粗利益予測"]);
-    addChip(detailChipRow1, "仕入れ目安単価", data["仕入れ目安単価"]);
-    addChip(detailChipRow1, "在庫数", data["在庫数"]);
-
-    addChip(detailChipRow2, "30日販売数", data["30日販売数"]);
-    addChip(detailChipRow2, "90日販売数", data["90日販売数"]);
-    addChip(detailChipRow2, "180日販売数", data["180日販売数"]);
-    addChip(detailChipRow2, "予測30日販売数", data["予測30日販売数"]);
-    addChip(detailChipRow2, "複数在庫指数", `45日：${data["複数在庫指数45日分"] ?? "-"} / 60日：${data["複数在庫指数60日分"] ?? "-"}`);
-    addChip(detailChipRow2, "ライバル偏差", `×1：${data["ライバル偏差1"] ?? "-"} / ×2：${data["ライバル偏差2"] ?? "-"}`);
-
-    addChip(detailChipRow3, "重量(kg)", data["重量kg"]);
-    if (data["縦cm"] != null && data["横cm"] != null && data["高さcm"] != null) {
-      addChip(detailChipRow3, "サイズ(縦×横×高)", `${data["縦cm"]}×${data["横cm"]}×${data["高さcm"]} cm`);
-    }
-    addChip(detailChipRow3, "容積重量", data["容積重量"]);
-    addChip(detailChipRow3, "想定送料", data["想定送料"]);
-    addChip(detailChipRow3, "送料", data["送料"]);
-    addChip(detailChipRow3, "関税", data["関税"]);
-
-    detailKeepaLink.innerHTML = "";
-    if (data["Keepaリンク"]) {
-      detailKeepaLink.innerHTML = `<a href="${data["Keepaリンク"]}" target="_blank" rel="noopener">Keepa で詳細を見る</a>`;
-    }
-
-    detailGraphAsinLabel.textContent = `ASIN: ${data.ASIN}`;
-
-    const series = getDemandSupplySeries(data.ASIN);
-    if (detailDemandChart) detailDemandChart.destroy();
-    detailDemandChart = new Chart(detailDemandChartCanvas.getContext("2d"), {
-      type: "line",
-      data: {
-        labels: series.labels,
-        datasets: [
-          { label: "ランキング（小さいほど上位）", data: series.ranking, borderWidth: 2, pointRadius: 0, tension: 0.25, borderColor: "#60a5fa", yAxisID: "yRank" },
-          { label: "セラー数", data: series.sellers, borderWidth: 2, pointRadius: 0, tension: 0.25, borderColor: "#22c55e", yAxisID: "ySeller" },
-          { label: "価格（USD）", data: series.price, borderWidth: 2, pointRadius: 0, tension: 0.25, borderColor: "#f97316", yAxisID: "yPrice" }
-        ]
       },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { mode: "index", intersect: false },
-        plugins: {
-          legend: { position: "top" },
-          tooltip: {
-            callbacks: {
-              label: (ctx) => {
-                const label = ctx.dataset.label || "";
-                if (ctx.dataset.yAxisID === "yPrice") return `${label}: $${ctx.parsed.y.toFixed(2)}`;
-                return `${label}: ${ctx.parsed.y}`;
-              }
-            }
-          }
+      scales: {
+        x: { display: true, ticks: { maxTicksLimit: 10 } },
+        yRank: {
+          type: "linear",
+          position: "left",
+          reverse: true,
+          title: { display: true, text: "ランキング" }
         },
-        scales: {
-          x: { display: true, ticks: { maxTicksLimit: 10 } },
-          yRank: { type: "linear", position: "left", reverse: true, title: { display: true, text: "ランキング" } },
-          ySeller: { type: "linear", position: "right", title: { display: true, text: "セラー数" }, grid: { drawOnChartArea: false } },
-          yPrice: { type: "linear", position: "right", offset: true, title: { display: true, text: "価格(USD)" }, grid: { drawOnChartArea: false } }
+        ySeller: {
+          type: "linear",
+          position: "right",
+          grid: { drawOnChartArea: false },
+          title: { display: true, text: "セラー数" }
+        },
+        yPrice: {
+          type: "linear",
+          position: "right",
+          offset: true,
+          grid: { drawOnChartArea: false },
+          title: { display: true, text: "価格(USD)" }
         }
       }
-    });
-
-    detailChkDemandSupply.checked = true;
-    detailChkSupplyPrice.checked = false;
-    applyDetailCheckboxVisibility();
-  }
-
-  function applyDetailCheckboxVisibility() {
-    if (!detailDemandChart) return;
-    const demandOn = detailChkDemandSupply.checked;
-    const supplyOn = detailChkSupplyPrice.checked;
-    let showRank = true, showSeller = true, showPrice = true;
-
-    if (demandOn && !supplyOn) { showRank = true; showSeller = true; showPrice = false; }
-    else if (!demandOn && supplyOn) { showRank = false; showSeller = true; showPrice = true; }
-    else if (demandOn && supplyOn) { showRank = true; showSeller = true; showPrice = true; }
-    else { showRank = true; showSeller = true; showPrice = true; }
-
-    detailDemandChart.data.datasets[0].hidden = !showRank;
-    detailDemandChart.data.datasets[1].hidden = !showSeller;
-    detailDemandChart.data.datasets[2].hidden = !showPrice;
-    detailDemandChart.update();
-  }
-
-  detailChkDemandSupply.addEventListener("change", applyDetailCheckboxVisibility);
-  detailChkSupplyPrice.addEventListener("change", applyDetailCheckboxVisibility);
-  detailAsinApplyBtn.addEventListener("click", () => renderDetailPage(detailAsinInput.value));
-
-  /* ==== ページ切替 ==== */
-  function showPage(which) {
-    if (which === "list") {
-      pageList.style.display = "";
-      pageDetail.style.display = "none";
-      btnGoList.classList.add("active");
-      btnGoDetail.classList.remove("active");
-    } else {
-      pageList.style.display = "none";
-      pageDetail.style.display = "";
-      btnGoDetail.classList.add("active");
-      btnGoList.classList.remove("active");
     }
+  });
+}
+
+/* チェックボックスで表示線を切り替え */
+function applyDetailCheckbox() {
+  if (!detailChart) return;
+  const demandOn = chkDemandSupply.checked;
+  const supplyOn = chkSupplyPrice.checked;
+
+  let showRank = true;
+  let showSeller = true;
+  let showPrice = true;
+
+  if (demandOn && !supplyOn) {
+    // 《需要＆供給》のみ → ランク＋セラー
+    showRank = true; showSeller = true; showPrice = false;
+  } else if (!demandOn && supplyOn) {
+    // 《供給＆価格》のみ → セラー＋価格
+    showRank = false; showSeller = true; showPrice = true;
+  } else if (demandOn && supplyOn) {
+    // 両方ON → 3本全部
+    showRank = true; showSeller = true; showPrice = true;
+  } else {
+    // 両方OFF → 一応全部表示
+    showRank = true; showSeller = true; showPrice = true;
   }
 
-  btnGoList.addEventListener("click", () => showPage("list"));
-  btnGoDetail.addEventListener("click", () => {
-    const currentAsins = getCurrentRowAsins().filter(a => a);
-    const asin = currentAsins[0] || Object.keys(ASIN_DATA)[0];
-    renderDetailPage(asin);
-    showPage("detail");
-  });
+  detailChart.data.datasets[0].hidden = !showRank;
+  detailChart.data.datasets[1].hidden = !showSeller;
+  detailChart.data.datasets[2].hidden = !showPrice;
+  detailChart.update();
+}
 
-  /* ==== 初期化 ==== */
-  buildAsinCatalogAndStatus();
-  buildHeader();
-  renderHiddenColsBar();
-  createRow();
+chkDemandSupply.addEventListener("change", applyDetailCheckbox);
+chkSupplyPrice.addEventListener("change", applyDetailCheckbox);
 
-  addRowFromAsinBtn.addEventListener("click", () => {
-    const asin = globalInput.value.trim();
-    if (!asin) {
-      const row = createRow();
-      const input = row.querySelector('td[data-col-id="ASIN"] input.asin-input');
-      if (input) input.focus();
-      return;
-    }
-    createRow(asin);
-    globalInput.value = "";
-  });
+/* ASIN入力から更新 */
+detailAsinApplyBtn.addEventListener("click", () => {
+  renderDetail(detailAsinInput.value);
+});
+detailAsinInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    renderDetail(detailAsinInput.value);
+  }
+});
 
-  addEmptyRowBtn.addEventListener("click", () => {
-    const row = createRow();
-    const input = row.querySelector('td[data-col-id="ASIN"] input.asin-input');
-    if (input) input.focus();
-  });
+/* 初期表示：一覧ページ */
+showPage("list");
 </script>
 </body>
 </html>
