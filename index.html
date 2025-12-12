@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>MES-AI-A ASINリサーチテーブル</title>
+  <style>
+    :root {
+      --bg-main: #f5f7fb;
+      --bg-header: #ffffff;
+      --bg-header2: #eef1fb;
+      --bg-row-alt: #fafbff;
+      --border: #d4d8ea;
+      --accent: #4b6bff;
+      --text-main: #1f2933;
+      --text-muted: #6b7280;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg-main);
+      color: var(--text-main);
+    }
+    .app-shell { min-height: 100vh; display: flex; flex-direction: column; }
+
+    header {
+      padding: 14px 24px;
+      background: linear-gradient(90deg, #4b6bff, #8a63ff);
+      color: #fff;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 650;
+      letter-spacing: .03em;
+    }
+    header .subtitle {
+      font-size: 12px;
+      opacity: 0.9;
+    }
+
+    .toolbar {
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .toolbar-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .toolbar label {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .toolbar input[type="text"] {
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      min-width: 220px;
+      font-size: 13px;
+    }
+    .toolbar button {
+      border-radius: 999px;
+      border: none;
+      font-size: 13px;
+      padding: 7px 14px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: transform 0.04s ease-out, box-shadow 0.04s ease-out, background 0.1s;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 2px 6px rgba(75,107,255,0.35);
+    }
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px rgba(75,107,255,0.45);
+    }
+    .btn-ghost {
+      background: #ffffff;
+      color: var(--text-main);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { background: #f3f4ff; }
+
+    .status {
+      margin-left: auto;
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .table-wrapper { flex: 1; padding: 8px 16px 24px; }
+    .table-container {
+      border-radius: 12px;
+      background: #ffffff;
+      box-shadow: 0 6px 18px rgba(15,23,42,0.08);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: 260px;
+    }
+    .table-scroll { overflow-x: auto; overflow-y: hidden; }
+
+    table {
+      border-collapse: separate;
+      border-spacing: 0;
+      min-width: 2800px;
+      font-size: 11px;
+      line-height: 1.4;
+    }
+    thead { background: linear-gradient(180deg, var(--bg-header), var(--bg-header2)); }
+
+    th, td {
+      padding: 6px 8px;
+      border-bottom: 1px solid var(--border);
+      border-right: 1px solid var(--border);
+      white-space: nowrap;
+      text-align: center;
+    }
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: linear-gradient(180deg, var(--bg-header), var(--bg-header2));
+    }
+    th:nth-child(1),
+    td:nth-child(1) {
+      position: sticky;
+      left: 0;
+      z-index: 3;
+      background: #f4f5ff;
+      box-shadow: 4px 0 6px rgba(15,23,42,0.05);
+    }
+    tr:nth-child(even) td { background: var(--bg-row-alt); }
+    tbody tr:hover td { background: #f1f5ff; }
+
+    td img.product-image {
+      max-height: 60px;
+      border-radius: 8px;
+      display: block;
+      margin: 0 auto;
+    }
+    td input.asin-input {
+      width: 100%;
+      padding: 4px 6px;
+      font-size: 11px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    td.readonly-cell { font-size: 11px; }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: #ecfeff;
+      color: #0891b2;
+      font-size: 10px;
+      font-weight: 600;
+    }
+    .pill-danger { background: #fee2e2; color: #b91c1c; }
+    .pill-ok { background: #dcfce7; color: #15803d; }
+
+    .table-footer {
+      padding: 6px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid var(--border);
+      background: #f9fafb;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .helper-text {
+      font-size: 11px;
+      color: var(--text-muted);
+      padding: 4px 8px 8px;
+    }
+
+    /* 列設定パネル */
+    .column-settings-toggle {
+      margin-left: auto;
+    }
+    .column-settings-panel {
+      position: fixed;
+      top: 72px;
+      right: 18px;
+      width: 280px;
+      max-height: 60vh;
+      background: #ffffff;
+      box-shadow: 0 10px 25px rgba(15,23,42,0.25);
+      border-radius: 12px;
+      padding: 10px 12px 12px;
+      display: none;
+      flex-direction: column;
+      z-index: 50;
+    }
+    .column-settings-panel.open { display: flex; }
+    .column-settings-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .column-settings-list {
+      overflow: auto;
+      padding-right: 4px;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      margin: 6px 0 8px;
+    }
+    .col-setting {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 0;
+      font-size: 11px;
+    }
+    .col-setting label {
+      flex: 1;
+      text-align: left;
+    }
+    .col-setting button {
+      border-radius: 6px;
+      padding: 2px 4px;
+      font-size: 10px;
+      border: 1px solid var(--border);
+      background: #f9fafb;
+      cursor: pointer;
+    }
+    .col-setting button:hover { background: #eef2ff; }
+    .column-settings-footer {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    @media (max-width: 768px) {
+      header { flex-direction: column; align-items: flex-start; }
+      .toolbar { padding-inline: 16px; }
+      .toolbar input[type="text"] { min-width: 160px; flex: 1; }
+      .status { width: 100%; justify-content: flex-start; margin-left: 0; }
+      .column-settings-panel {
+        top: auto;
+        bottom: 12px;
+        right: 10px;
+        width: 260px;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <header>
+    <div>
+      <h1>MES-AI-A ASINダッシュボード</h1>
+      <div class="subtitle">ASINを入力すると、商品情報・利益予測などを自動表示します。</div>
+    </div>
+    <div class="status">
+      ローカルASINデータ：5件
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <div class="toolbar-group">
+      <label for="globalAsinInput">ASINから行を作成:</label>
+      <input id="globalAsinInput" type="text" placeholder="例）B0A0000001" />
+      <button id="addRowFromAsinBtn" class="btn-primary">
+        ＋ 1行追加して自動入力
+      </button>
+    </div>
+    <div class="toolbar-group">
+      <button id="addEmptyRowBtn" class="btn-ghost">空の行を追加</button>
+    </div>
+    <div class="toolbar-group column-settings-toggle">
+      <button id="toggleColumnSettingsBtn" class="btn-ghost">列の表示・並び替え</button>
+    </div>
+  </div>
+
+  <!-- 列設定パネル -->
+  <div id="columnSettingsPanel" class="column-settings-panel">
+    <div class="column-settings-header">
+      <span>列設定</span>
+      <button id="closeColumnSettingsBtn" style="border-radius:999px;border:1px solid var(--border);background:#f9fafb;font-size:10px;padding:2px 6px;cursor:pointer;">×</button>
+    </div>
+    <div id="columnSettingsList" class="column-settings-list"></div>
+    <div class="column-settings-footer">
+      <span>チェックで表示／非表示</span>
+      <span>↑↓で並び替え</span>
+    </div>
+  </div>
+
+  <div class="table-wrapper">
+    <div class="table-container">
+      <div class="table-scroll">
+        <table id="asinTable">
+          <thead>
+          <tr id="tableHeaderRow"></tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+      <div class="table-footer">
+        <div>行を追加 → 左端の ASIN を入力すると自動で各項目が埋まります。</div>
+        <div>「レビュー数推移グラフ」「需給推移グラフ」は現在は空欄で保持しています。</div>
+      </div>
+    </div>
+    <div class="helper-text">
+      ・列ヘッダーは固定され、横スクロールで全項目を確認できます。<br>
+      ・実運用では ASIN_DATA 部分をAPI連携などに差し替える想定です。
+    </div>
+  </div>
+</div>
+
+<script>
+  // ==== 列定義（表示順 & データキー） ====
+  const BASE_COLUMNS = [
+    { id: "ASIN", label: "ASIN", type: "asinInput", visible: true },
+    { id: "商品画像", label: "商品画像", type: "image", visible: true },
+    { id: "品名", label: "品名", visible: true },
+    { id: "注意事項（警告系）", label: "注意事項<br>（警告系）", visible: false },
+    { id: "親カテゴリ", label: "親カテゴリ", visible: true },
+    { id: "サブカテゴリ", label: "サブカテゴリ", visible: true },
+    { id: "ブランド", label: "ブランド", visible: true },
+    { id: "レビュー評価", label: "レビュー<br>評価", visible: true },
+    { id: "レビュー数推移グラフ", label: "レビュー数<br>推移グラフ", visible: false },
+    { id: "アメリカASIN", label: "アメリカ<br>ASIN", visible: true },
+    { id: "日本ASIN", label: "日本ASIN", visible: false },
+    { id: "JAN", label: "JAN", visible: false },
+    { id: "SKU", label: "SKU", visible: false },
+    { id: "個数", label: "個数", visible: true },
+    { id: "粗利益率予測", label: "粗利益率<br>予測", visible: true },
+    { id: "入金額予測", label: "入金額<br>予測", visible: true },
+    { id: "粗利益予測", label: "粗利益<br>予測", visible: true },
+    { id: "粗利益", label: "粗利益", visible: false },
+    { id: "粗利益率", label: "粗利益率", visible: false },
+    { id: "販売額（ドル）", label: "販売額（ドル）", visible: true },
+    { id: "入金額（円）", label: "入金額（円）", visible: true },
+    { id: "入金額計（円）", label: "入金額計（円）", visible: false },
+    {
+      id: "需給推移",
+      label: "需給推移<br>☐《需要＆供給》<br>☐《供給＆価格》<br>☐《レビュー数＆●●》",
+      visible: false
+    },
+    { id: "30日販売数", label: "30日<br>販売数", visible: true },
+    { id: "90日販売数", label: "90日<br>販売数", visible: false },
+    { id: "180日販売数", label: "180日<br>販売数", visible: false },
+    { id: "予測30日販売数", label: "予測<br>30日<br>販売数", visible: true },
+    { id: "複数在庫指数45日分", label: "複数在庫指数<br>45日分", visible: false },
+    { id: "複数在庫指数60日分", label: "複数在庫指数<br>60日分", visible: false },
+    { id: "ライバル偏差1", label: "ライバル偏差<br>×1", visible: false },
+    { id: "ライバル偏差2", label: "ライバル偏差<br>×2", visible: false },
+    { id: "ライバル増加率", label: "ライバル<br>増加率", visible: false },
+    { id: "在庫数", label: "在庫数", visible: true },
+    { id: "Keepaリンク", label: "Keepa<br>(アメリカAmazon)", visible: true },
+    { id: "FBA出品", label: "FBA出品", visible: true },
+    { id: "返品率", label: "返品率", visible: false },
+    { id: "過去3月FBA最安値", label: "過去3月<br>FBA最安値", visible: false },
+    { id: "カートボックス価格", label: "カートボックス<br>価格", visible: true },
+    { id: "FBA最安値", label: "FBA最安値", visible: false },
+    { id: "日本最安値", label: "日本最安値", visible: false },
+    { id: "日本FBA最安値", label: "日本FBA<br>最安値", visible: false },
+    { id: "日本自己発送最安値", label: "日本自己<br>発送最安値", visible: false },
+    { id: "仕入れ目安単価", label: "仕入れ<br>目安単価", visible: true },
+    { id: "仕入合計", label: "仕入合計", visible: false },
+    { id: "仕入計", label: "仕入計", visible: false },
+    { id: "重量kg", label: "重量<br>（kg）", visible: true },
+    { id: "サイズ感", label: "サイズ感", visible: false },
+    { id: "縦cm", label: "縦(cm)", visible: false },
+    { id: "横cm", label: "横(cm)", visible: false },
+    { id: "高さcm", label: "高さ(cm)", visible: false },
+    { id: "容積重量", label: "容積重量", visible: false },
+    { id: "材質", label: "材質", visible: false },
+    { id: "大型", label: "大型", visible: false },
+    { id: "請求重量", label: "請求重量", visible: false },
+    { id: "想定送料", label: "想定送料", visible: true },
+    { id: "送料", label: "送料", visible: false },
+    { id: "関税", label: "関税", visible: false }
+  ];
+
+  // 可変の列配列（並び替え・可視状態はここを更新）
+  let columns = BASE_COLUMNS.map(c => ({ ...c }));
+
+  // ==== ダミーASINデータ ====
+  // 「レビュー数推移グラフ」「需給推移」はすべて空文字にしてあります。
+  const ASIN_DATA = {
+    "B0A0000001": {
+      ASIN: "B0A0000001",
+      商品画像: "https://via.placeholder.com/120x120?text=Toy+Set",
+      品名: "スーパーアクションヒーロー 5体セット",
+      "注意事項（警告系）": "対象年齢6歳以上 / 小さな部品に注意",
+      親カテゴリ: "Toys & Games",
+      サブカテゴリ: "Action Figures",
+      ブランド: "HeroWorks",
+      レビュー評価: "★★★★☆ (523)",
+      レビュー数推移グラフ: "",
+      アメリカASIN: "B0A0000001",
+      日本ASIN: "B0J0000001",
+      JAN: "4900000000001",
+      SKU: "HW-HERO-SET-5",
+      個数: 1,
+      粗利益率予測: "26%",
+      入金額予測: "6,200円",
+      粗利益予測: "1,612円",
+      粗利益: "1,580円",
+      粗利益率: "25%",
+      "販売額（ドル）": "$39.99",
+      "入金額（円）": "6,200円",
+      "入金額計（円）": "6,200円",
+      需給推移: "",
+      "30日販売数": 95,
+      "90日販売数": 260,
+      "180日販売数": 510,
+      "予測30日販売数": 110,
+      "複数在庫指数45日分": "1.1",
+      "複数在庫指数60日分": "1.3",
+      ライバル偏差1: "+0.5",
+      ライバル偏差2: "+0.9",
+      ライバル増加率: "12%",
+      在庫数: 60,
+      Keepaリンク: "https://keepa.com/#!product/1-B0A0000001",
+      FBA出品: "はい",
+      返品率: "1.8%",
+      過去3月FBA最安値: "$35.90",
+      カートボックス価格: "$39.99",
+      FBA最安値: "$37.50",
+      日本最安値: "¥6,780",
+      日本FBA最安値: "¥6,980",
+      日本自己発送最安値: "¥6,600",
+      仕入れ目安単価: "¥3,700",
+      仕入合計: "¥3,700",
+      仕入計: "¥3,700",
+      重量kg: "1.10",
+      サイズ感: "中型",
+      縦cm: 32,
+      横cm: 26,
+      高さcm: 8,
+      容積重量: "1.20",
+      材質: "プラスチック / 紙",
+      大型: "いいえ",
+      請求重量: "1.20kg",
+      想定送料: "¥1,150",
+      送料: "¥1,120",
+      関税: "¥0"
+    },
+    "B0A0000002": {
+      ASIN: "B0A0000002",
+      商品画像: "https://via.placeholder.com/120x120?text=Puzzle",
+      品名: "ウルトラギャラクシーパズル 2000ピース",
+      "注意事項（警告系）": "対象年齢12歳以上",
+      親カテゴリ: "Toys & Games",
+      サブカテゴリ: "Jigsaw Puzzles",
+      ブランド: "GalaxyMind",
+      レビュー評価: "★★★★☆ (312)",
+      レビュー数推移グラフ: "",
+      アメリカASIN: "B0A0000002",
+      日本ASIN: "B0J0000002",
+      JAN: "4900000000002",
+      SKU: "GM-PUZZLE-2000",
+      個数: 1,
+      粗利益率予測: "30%",
+      入金額予測: "4,200円",
+      粗利益予測: "1,260円",
+      粗利益: "1,200円",
+      粗利益率: "29%",
+      "販売額（ドル）": "$26.50",
+      "入金額（円）": "4,200円",
+      "入金額計（円）": "4,200円",
+      需給推移: "",
+      "30日販売数": 70,
+      "90日販売数": 190,
+      "180日販売数": 370,
+      "予測30日販売数": 80,
+      "複数在庫指数45日分": "1.0",
+      "複数在庫指数60日分": "1.1",
+      ライバル偏差1: "+0.2",
+      ライバル偏差2: "+0.4",
+      ライバル増加率: "5%",
+      在庫数: 45,
+      Keepaリンク: "https://keepa.com/#!product/1-B0A0000002",
+      FBA出品: "はい",
+      返品率: "1.1%",
+      過去3月FBA最安値: "$24.99",
+      カートボックス価格: "$26.50",
+      FBA最安値: "$25.20",
+      日本最安値: "¥3,980",
+      日本FBA最安値: "¥4,280",
+      日本自己発送最安値: "¥3,900",
+      仕入れ目安単価: "¥2,500",
+      仕入合計: "¥2,500",
+      仕入計: "¥2,500",
+      重量kg: "0.90",
+      サイズ感: "小型",
+      縦cm: 28,
+      横cm: 22,
+      高さcm: 6,
+      容積重量: "0.75",
+      材質: "紙",
+      大型: "いいえ",
+      請求重量: "0.90kg",
+      想定送料: "¥900",
+      送料: "¥880",
+      関税: "¥0"
+    },
+    "B0A0000003": {
+      ASIN: "B0A0000003",
+      商品画像: "https://via.placeholder.com/120x120?text=Board+Game",
+      品名: "ストラテジーボードゲーム ネオ・シティ",
+      "注意事項（警告系）": "対象年齢10歳以上 / 3人〜5人用",
+      親カテゴリ: "Toys & Games",
+      サブカテゴリ: "Board Games",
+      ブランド: "NeoPlay",
+      レビュー評価: "★★★★★ (198)",
+      レビュー数推移グラフ: "",
+      アメリカASIN: "B0A0000003",
+      日本ASIN: "B0J0000003",
+      JAN: "4900000000003",
+      SKU: "NP-BOARD-NEOCITY",
+      個数: 1,
+      粗利益率予測: "32%",
+      入金額予測: "5,800円",
+      粗利益予測: "1,856円",
+      粗利益: "1,820円",
+      粗利益率: "31%",
+      "販売額（ドル）": "$35.00",
+      "入金額（円）": "5,800円",
+      "入金額計（円）": "5,800円",
+      需給推移: "",
+      "30日販売数": 55,
+      "90日販売数": 150,
+      "180日販売数": 290,
+      "予測30日販売数": 65,
+      "複数在庫指数45日分": "1.3",
+      "複数在庫指数60日分": "1.5",
+      ライバル偏差1: "+0.6",
+      ライバル偏差2: "+1.0",
+      ライバル増加率: "10%",
+      在庫数: 40,
+      Keepaリンク: "https://keepa.com/#!product/1-B0A0000003",
+      FBA出品: "はい",
+      返品率: "1.6%",
+      過去3月FBA最安値: "$32.00",
+      カートボックス価格: "$35.00",
+      FBA最安値: "$33.50",
+      日本最安値: "¥5,980",
+      日本FBA最安値: "¥6,280",
+      日本自己発送最安値: "¥5,700",
+      仕入れ目安単価: "¥3,200",
+      仕入合計: "¥3,200",
+      仕入計: "¥3,200",
+      重量kg: "1.30",
+      サイズ感: "中型",
+      縦cm: 34,
+      横cm: 26,
+      高さcm: 7,
+      容積重量: "1.40",
+      材質: "紙 / プラスチック",
+      大型: "いいえ",
+      請求重量: "1.40kg",
+      想定送料: "¥1,200",
+      送料: "¥1,160",
+      関税: "¥0"
+    },
+    "B0A0000004": {
+      ASIN: "B0A0000004",
+      商品画像: "https://via.placeholder.com/120x120?text=Card+Game",
+      品名: "ファミリーパーティーカードゲーム 60枚セット",
+      "注意事項（警告系）": "対象年齢8歳以上",
+      親カテゴリ: "Toys & Games",
+      サブカテゴリ: "Card Games",
+      ブランド: "SmileDeck",
+      レビュー評価: "★★★★☆ (742)",
+      レビュー数推移グラフ: "",
+      アメリカASIN: "B0A0000004",
+      日本ASIN: "B0J0000004",
+      JAN: "4900000000004",
+      SKU: "SD-CARD-60",
+      個数: 1,
+      粗利益率予測: "24%",
+      入金額予測: "3,300円",
+      粗利益予測: "792円",
+      粗利益: "780円",
+      粗利益率: "24%",
+      "販売額（ドル）": "$20.99",
+      "入金額（円）": "3,300円",
+      "入金額計（円）": "3,300円",
+      需給推移: "",
+      "30日販売数": 130,
+      "90日販売数": 350,
+      "180日販売数": 690,
+      "予測30日販売数": 145,
+      "複数在庫指数45日分": "0.9",
+      "複数在庫指数60日分": "1.0",
+      ライバル偏差1: "+0.3",
+      ライバル偏差2: "+0.5",
+      ライバル増加率: "8%",
+      在庫数: 85,
+      Keepaリンク: "https://keepa.com/#!product/1-B0A0000004",
+      FBA出品: "はい",
+      返品率: "2.4%",
+      過去3月FBA最安値: "$18.99",
+      カートボックス価格: "$20.99",
+      FBA最安値: "$19.80",
+      日本最安値: "¥3,480",
+      日本FBA最安値: "¥3,780",
+      日本自己発送最安値: "¥3,400",
+      仕入れ目安単価: "¥1,900",
+      仕入合計: "¥1,900",
+      仕入計: "¥1,900",
+      重量kg: "0.45",
+      サイズ感: "小型",
+      縦cm: 16,
+      横cm: 10,
+      高さcm: 4,
+      容積重量: "0.25",
+      材質: "紙",
+      大型: "いいえ",
+      請求重量: "0.50kg",
+      想定送料: "¥650",
+      送料: "¥630",
+      関税: "¥0"
+    },
+    "B0A0000005": {
+      ASIN: "B0A0000005",
+      商品画像: "https://via.placeholder.com/120x120?text=Figure",
+      品名: "コレクションフィギュア 限定カラーVer.",
+      "注意事項（警告系）": "対象年齢15歳以上 / ディスプレイ専用",
+      親カテゴリ: "Toys & Games",
+      サブカテゴリ: "Collectible Figures",
+      ブランド: "PrimeFigure",
+      レビュー評価: "★★★★★ (87)",
+      レビュー数推移グラフ: "",
+      アメリカASIN: "B0A0000005",
+      日本ASIN: "B0J0000005",
+      JAN: "4900000000005",
+      SKU: "PF-COLLECT-LTD",
+      個数: 1,
+      粗利益率予測: "35%",
+      入金額予測: "10,400円",
+      粗利益予測: "3,640円",
+      粗利益: "3,580円",
+      粗利益率: "34%",
+      "販売額（ドル）": "$69.00",
+      "入金額（円）": "10,400円",
+      "入金額計（円）": "10,400円",
+      需給推移: "",
+      "30日販売数": 25,
+      "90日販売数": 70,
+      "180日販売数": 140,
+      "予測30日販売数": 30,
+      "複数在庫指数45日分": "1.6",
+      "複数在庫指数60日分": "1.8",
+      ライバル偏差1: "+1.1",
+      ライバル偏差2: "+1.5",
+      ライバル増加率: "18%",
+      在庫数: 20,
+      Keepaリンク: "https://keepa.com/#!product/1-B0A0000005",
+      FBA出品: "はい",
+      返品率: "0.9%",
+      過去3月FBA最安値: "$64.00",
+      カートボックス価格: "$69.00",
+      FBA最安値: "$66.50",
+      日本最安値: "¥11,800",
+      日本FBA最安値: "¥12,200",
+      日本自己発送最安値: "¥11,500",
+      仕入れ目安単価: "¥6,200",
+      仕入合計: "¥6,200",
+      仕入計: "¥6,200",
+      重量kg: "1.80",
+      サイズ感: "中型〜大型境界",
+      縦cm: 38,
+      横cm: 24,
+      高さcm: 18,
+      容積重量: "2.20",
+      材質: "PVC / ABS",
+      大型: "一部大型判定の可能性",
+      請求重量: "2.20kg",
+      想定送料: "¥1,650",
+      送料: "¥1,620",
+      関税: "¥0"
+    }
+  };
+
+  const headerRow = document.getElementById("tableHeaderRow");
+  const tbody = document.getElementById("tableBody");
+
+  function visibleColumns() {
+    return columns.filter(c => c.visible !== false);
+  }
+
+  function buildHeader() {
+    headerRow.innerHTML = "";
+    visibleColumns().forEach(col => {
+      const th = document.createElement("th");
+      th.innerHTML = col.label;
+      headerRow.appendChild(th);
+    });
+  }
+
+  function createRow(presetAsin = "") {
+    const tr = document.createElement("tr");
+
+    visibleColumns().forEach(col => {
+      const td = document.createElement("td");
+      td.dataset.colId = col.id;
+
+      if (col.type === "asinInput") {
+        const input = document.createElement("input");
+        input.type = "text";
+        input.className = "asin-input";
+        input.placeholder = "ASINを入力";
+        input.value = presetAsin;
+        input.addEventListener("change", () => handleAsinChange(tr, input.value));
+        input.addEventListener("blur", () => handleAsinChange(tr, input.value));
+        input.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            handleAsinChange(tr, input.value);
+          }
+        });
+        td.appendChild(input);
+      } else {
+        td.classList.add("readonly-cell");
+        td.textContent = "";
+      }
+
+      tr.appendChild(td);
+    });
+
+    tbody.appendChild(tr);
+    if (presetAsin) handleAsinChange(tr, presetAsin);
+    return tr;
+  }
+
+  function handleAsinChange(row, rawAsin) {
+    const asin = String(rawAsin || "").trim().toUpperCase();
+    const data = ASIN_DATA[asin];
+
+    const asinInputCell = row.querySelector('td[data-col-id="ASIN"] input.asin-input');
+    if (asinInputCell && asinInputCell.value !== asin) {
+      asinInputCell.value = asin;
+    }
+
+    if (!data) {
+      // 未登録ASIN → 他のセルを空に
+      visibleColumns().forEach(col => {
+        if (col.id === "ASIN") return;
+        const cell = row.querySelector(`td[data-col-id="${col.id}"]`);
+        if (!cell) return;
+        cell.innerHTML = "";
+        cell.textContent = "";
+      });
+      row.dataset.loaded = "false";
+      return;
+    }
+
+    visibleColumns().forEach(col => {
+      if (col.id === "ASIN") return;
+      const cell = row.querySelector(`td[data-col-id="${col.id}"]`);
+      if (!cell) return;
+
+      const value = data[col.id] ?? "";
+
+      if (col.type === "image") {
+        cell.innerHTML = "";
+        if (value) {
+          const img = document.createElement("img");
+          img.src = value;
+          img.alt = data["品名"] || asin;
+          img.className = "product-image";
+          cell.appendChild(img);
+        }
+      } else if (col.id === "FBA出品") {
+        cell.innerHTML = "";
+        if (value) {
+          const pill = document.createElement("span");
+          pill.className = "pill " + (String(value).includes("はい") ? "pill-ok" : "pill-danger");
+          pill.textContent = value;
+          cell.appendChild(pill);
+        }
+      } else if (col.id === "Keepaリンク") {
+        cell.innerHTML = "";
+        if (value) {
+          const a = document.createElement("a");
+          a.href = value;
+          a.target = "_blank";
+          a.rel = "noopener noreferrer";
+          a.textContent = "Keepaで見る";
+          a.className = "pill";
+          cell.appendChild(a);
+        }
+      } else {
+        cell.textContent = value;
+      }
+    });
+
+    row.dataset.loaded = "true";
+  }
+
+  // 現在の行のASIN一覧を取得
+  function getCurrentRowAsins() {
+    return Array.from(tbody.querySelectorAll("tr")).map(tr => {
+      const input = tr.querySelector('td[data-col-id="ASIN"] input.asin-input');
+      return input ? String(input.value || "").trim().toUpperCase() : "";
+    });
+  }
+
+  // 列設定変更後にテーブルを再構築
+  function rebuildTableFromCurrentRows() {
+    const asins = getCurrentRowAsins();
+    tbody.innerHTML = "";
+    buildHeader();
+    asins.forEach(asin => createRow(asin));
+  }
+
+  // ==== 列設定パネル ====
+  const columnSettingsPanel = document.getElementById("columnSettingsPanel");
+  const columnSettingsList = document.getElementById("columnSettingsList");
+
+  function buildColumnSettingsPanel() {
+    columnSettingsList.innerHTML = "";
+
+    columns.forEach((col, index) => {
+      const wrapper = document.createElement("div");
+      wrapper.className = "col-setting";
+      wrapper.dataset.colId = col.id;
+
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.checked = col.visible !== false;
+
+      // ASIN列は非表示にできないようにする（必要ならここを外せばOK）
+      if (col.id === "ASIN") {
+        checkbox.disabled = true;
+      }
+
+      checkbox.addEventListener("change", () => {
+        col.visible = checkbox.checked;
+        rebuildTableFromCurrentRows();
+        buildColumnSettingsPanel(); // チェック状態を同期
+      });
+
+      const label = document.createElement("label");
+      label.textContent = col.id;
+
+      const upBtn = document.createElement("button");
+      upBtn.textContent = "↑";
+      upBtn.addEventListener("click", () => {
+        if (index === 0) return;
+        [columns[index - 1], columns[index]] = [columns[index], columns[index - 1]];
+        rebuildTableFromCurrentRows();
+        buildColumnSettingsPanel();
+      });
+
+      const downBtn = document.createElement("button");
+      downBtn.textContent = "↓";
+      downBtn.addEventListener("click", () => {
+        if (index === columns.length - 1) return;
+        [columns[index + 1], columns[index]] = [columns[index], columns[index + 1]];
+        rebuildTableFromCurrentRows();
+        buildColumnSettingsPanel();
+      });
+
+      wrapper.appendChild(checkbox);
+      wrapper.appendChild(label);
+      wrapper.appendChild(upBtn);
+      wrapper.appendChild(downBtn);
+      columnSettingsList.appendChild(wrapper);
+    });
+  }
+
+  // ==== 初期化 ====
+  const globalInput = document.getElementById("globalAsinInput");
+  const addRowFromAsinBtn = document.getElementById("addRowFromAsinBtn");
+  const addEmptyRowBtn = document.getElementById("addEmptyRowBtn");
+  const toggleColumnSettingsBtn = document.getElementById("toggleColumnSettingsBtn");
+  const closeColumnSettingsBtn = document.getElementById("closeColumnSettingsBtn");
+
+  buildHeader();
+  createRow(); // 最初に1行だけ用意
+
+  addRowFromAsinBtn.addEventListener("click", () => {
+    const asin = globalInput.value.trim();
+    if (!asin) {
+      const row = createRow();
+      const input = row.querySelector('td[data-col-id="ASIN"] input.asin-input');
+      if (input) input.focus();
+      return;
+    }
+    createRow(asin);
+    globalInput.value = "";
+  });
+
+  addEmptyRowBtn.addEventListener("click", () => {
+    const row = createRow();
+    const input = row.querySelector('td[data-col-id="ASIN"] input.asin-input');
+    if (input) input.focus();
+  });
+
+  toggleColumnSettingsBtn.addEventListener("click", () => {
+    const isOpen = columnSettingsPanel.classList.contains("open");
+    if (!isOpen) {
+      buildColumnSettingsPanel();
+      columnSettingsPanel.classList.add("open");
+    } else {
+      columnSettingsPanel.classList.remove("open");
+    }
+  });
+
+  closeColumnSettingsBtn.addEventListener("click", () => {
+    columnSettingsPanel.classList.remove("open");
+  });
+
+  // パネル外クリックで閉じる
+  document.addEventListener("click", (e) => {
+    if (!columnSettingsPanel.classList.contains("open")) return;
+    const target = e.target;
+    if (
+      !columnSettingsPanel.contains(target) &&
+      target !== toggleColumnSettingsBtn
+    ) {
+      columnSettingsPanel.classList.remove("open");
+    }
+  });
+</script>
+</body>
+</html>
