@@ -13,12 +13,12 @@ const basicTitle = document.getElementById("basicTitle");
 const basicBrand = document.getElementById("basicBrand");
 const basicRating = document.getElementById("basicRating");
 const basicASIN = document.getElementById("basicASIN");
-const basicAsinJP = document.getElementById("basicAsinJP");
-const basicJAN = document.getElementById("basicJAN");
-const basicSKU = document.getElementById("basicSKU");
+const basicAsinGroup = document.getElementById("basicAsinGroup");
+const basicSize = document.getElementById("basicSize");
+const basicWeight = document.getElementById("basicWeight");
+const basicMaterial = document.getElementById("basicMaterial");
 const basicCatParent = document.getElementById("basicCatParent");
 const basicCatChild = document.getElementById("basicCatChild");
-const basicSales30 = document.getElementById("basicSales30");
 const basicWarning = document.getElementById("basicWarning");
 
 const centerFBA = document.getElementById("centerFBA");
@@ -248,18 +248,15 @@ function renderWarningTags(container, rawText) {
   container.appendChild(wrap);
 }
 
-/* ========= その他の指標テーブル（前回と同じ） ========= */
-/* （長いのでそのままコピペして使ってください。ここでは省略しないで記載します） */
-
+/* ========= 下段テーブル ========= */
 const detailHeaderRow = document.getElementById("detailHeaderRow");
 const detailBodyRow   = document.getElementById("detailBodyRow");
 const detailHiddenBar = document.getElementById("detailHiddenBar");
 
+/* JAN / SKU / サイズ / 重量kg / 材質 は削除済み */
 const DETAIL_COLUMNS_DEF = [
   { id: "アメリカASIN",       label: "アメリカASIN",   sub:"US Listing",       visible:true  },
   { id: "日本ASIN",           label: "日本ASIN",       sub:"JP Listing",       visible:true  },
-  { id: "JAN",                label: "JAN",            sub:"バーコード",       visible:true  },
-  { id: "SKU",                label: "SKU",            sub:"管理用コード",     visible:true  },
   { id: "個数",               label: "個数",           sub:"1注文あたり",     visible:true  },
   { id: "30日販売数",         label: "30日販売数",     sub:"実績",             visible:true  },
   { id: "90日販売数",         label: "90日販売数",     sub:"実績",             visible:false },
@@ -280,11 +277,8 @@ const DETAIL_COLUMNS_DEF = [
   { id: "仕入れ目安単価",     label: "仕入れ目安単価", sub:"1個",              visible:true  },
   { id: "仕入合計",           label: "仕入合計",       sub:"1注文",            visible:false },
   { id: "仕入計",             label: "仕入 計",        sub:"その他含む",       visible:false },
-  { id: "重量kg",             label: "重量",           sub:"実重量 (kg)",      visible:true  },
-  { id: "サイズ",             label: "サイズ",         sub:"縦×横×高さ",       visible:true  },
   { id: "サイズ感",           label: "サイズ感",       sub:"S / M / L",        visible:false },
   { id: "容積重量",           label: "容積重量",       sub:"kg換算",           visible:false },
-  { id: "材質",               label: "材質",           sub:"主素材",           visible:true  },
   { id: "大型",               label: "大型判定",       sub:"FBA基準",         visible:true  },
   { id: "請求重量",           label: "請求重量",       sub:"課金用",           visible:false },
   { id: "想定送料",           label: "想定送料",       sub:"弊社想定",         visible:true  },
@@ -424,12 +418,19 @@ function renderDetail(asin, data) {
   basicBrand.textContent = data["ブランド"] || "";
   basicRating.textContent = data["レビュー評価"] || "";
   basicASIN.textContent = asin;
-  basicAsinJP.textContent = data["日本ASIN"] || "－";
-  basicJAN.textContent = data["JAN"] || "－";
-  basicSKU.textContent = data["SKU"] || "－";
+
+  const jpAsin = data["日本ASIN"] || "－";
+  const usAsin = data["アメリカASIN"] || asin;
+  const jan = data["JAN"] || "－";
+  const sku = data["SKU"] || "－";
+  basicAsinGroup.textContent = `日本: ${jpAsin} / US: ${usAsin} / JAN: ${jan} / SKU: ${sku}`;
+
+  basicSize.textContent = data["サイズ"] || "－";
+  basicWeight.textContent = data["重量kg"] || "－";
+  basicMaterial.textContent = data["材質"] || "－";
+
   basicCatParent.textContent = data["親カテゴリ"] || "";
   basicCatChild.textContent = data["サブカテゴリ"] || "";
-  basicSales30.textContent = data["30日販売数"] != null ? `${data["30日販売数"]} 個` : "－";
   renderWarningTags(basicWarning, data["注意事項（警告系）"]);
 
   centerFBA.textContent = data["FBA最安値"] || "－";
