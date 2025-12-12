@@ -245,7 +245,7 @@
       display: block;
       margin: 0 auto;
     }
-    td input.asin-input {
+    td.input-cell input.asin-input {
       width: 100%;
       padding: 2px 4px;
       font-size: 10px;
@@ -253,6 +253,14 @@
       border: 1px solid var(--border);
     }
     td.readonly-cell { font-size: 10px; }
+
+    /* まとめ表示用セル（カテゴリ・複数在庫指数・ライバル偏差） */
+    td.multi-line {
+      white-space: normal;
+      text-align: left;
+      line-height: 1.25;
+      font-size: 9px;
+    }
 
     .sparkline-container {
       width: 110px;
@@ -472,8 +480,8 @@
       "予測30日販売数": 110,
       "複数在庫指数45日分": "1.1",
       "複数在庫指数60日分": "1.3",
-      "ライバル偏差1": "+0.5",
-      "ライバル偏差2": "+0.9",
+      "ライバル偏差1": "0.5",
+      "ライバル偏差2": "0.9",
       "ライバル増加率": "12%",
       "在庫数": 60,
       "Keepaリンク": "https://keepa.com/#!product/1-B0A0000001",
@@ -531,8 +539,8 @@
       "予測30日販売数": 80,
       "複数在庫指数45日分": "1.0",
       "複数在庫指数60日分": "1.1",
-      "ライバル偏差1": "+0.2",
-      "ライバル偏差2": "+0.4",
+      "ライバル偏差1": "0.2",
+      "ライバル偏差2": "0.4",
       "ライバル増加率": "5%",
       "在庫数": 45,
       "Keepaリンク": "https://keepa.com/#!product/1-B0A0000002",
@@ -590,8 +598,8 @@
       "予測30日販売数": 65,
       "複数在庫指数45日分": "1.3",
       "複数在庫指数60日分": "1.5",
-      "ライバル偏差1": "+0.6",
-      "ライバル偏差2": "+1.0",
+      "ライバル偏差1": "0.6",
+      "ライバル偏差2": "1.0",
       "ライバル増加率": "10%",
       "在庫数": 40,
       "Keepaリンク": "https://keepa.com/#!product/1-B0A0000003",
@@ -649,8 +657,8 @@
       "予測30日販売数": 145,
       "複数在庫指数45日分": "0.9",
       "複数在庫指数60日分": "1.0",
-      "ライバル偏差1": "+0.3",
-      "ライバル偏差2": "+0.5",
+      "ライバル偏差1": "0.3",
+      "ライバル偏差2": "0.5",
       "ライバル増加率": "8%",
       "在庫数": 85,
       "Keepaリンク": "https://keepa.com/#!product/1-B0A0000004",
@@ -708,8 +716,8 @@
       "予測30日販売数": 30,
       "複数在庫指数45日分": "1.6",
       "複数在庫指数60日分": "1.8",
-      "ライバル偏差1": "+1.1",
-      "ライバル偏差2": "+1.5",
+      "ライバル偏差1": "1.1",
+      "ライバル偏差2": "1.5",
       "ライバル増加率": "18%",
       "在庫数": 20,
       "Keepaリンク": "https://keepa.com/#!product/1-B0A0000005",
@@ -744,9 +752,11 @@
     { id: "ASIN", label: "ASIN", type: "asinInput", visible: true },
     { id: "商品画像", label: "商品画像", type: "image", visible: true },
     { id: "品名", label: "品名", visible: true },
-    { id: "注意事項（警告系）", label: "注意事項<br>（警告系）", visible: false },
-    { id: "親カテゴリ", label: "親カテゴリ", visible: true },
-    { id: "サブカテゴリ", label: "サブカテゴリ", visible: true },
+
+    { id: "親カテゴリ", label: "親カテゴリ", visible: false },
+    { id: "サブカテゴリ", label: "サブカテゴリ", visible: false },
+    { id: "カテゴリまとめ", label: "カテゴリ", type: "category", visible: true },
+
     { id: "ブランド", label: "ブランド", visible: true },
     { id: "レビュー評価", label: "レビュー<br>評価", visible: true },
     { id: "レビュー数推移グラフ", label: "レビュー数<br>推移グラフ", visible: false },
@@ -772,10 +782,15 @@
     { id: "90日販売数", label: "90日<br>販売数", visible: false },
     { id: "180日販売数", label: "180日<br>販売数", visible: false },
     { id: "予測30日販売数", label: "予測<br>30日<br>販売数", visible: true },
-    { id: "複数在庫指数45日分", label: "複数在庫指数<br>45日分", visible: false },
-    { id: "複数在庫指数60日分", label: "複数在庫指数<br>60日分", visible: false },
-    { id: "ライバル偏差1", label: "ライバル偏差<br>×1", visible: false },
-    { id: "ライバル偏差2", label: "ライバル偏差<br>×2", visible: false },
+
+    { id: "複数在庫指数45日分", label: "複数在庫指数45", visible: false },
+    { id: "複数在庫指数60日分", label: "複数在庫指数60", visible: false },
+    { id: "複数在庫指数まとめ", label: "複数在庫指数", type: "multiIndex", visible: true },
+
+    { id: "ライバル偏差1", label: "ライバル偏差×1", visible: false },
+    { id: "ライバル偏差2", label: "ライバル偏差×2", visible: false },
+    { id: "ライバル偏差まとめ", label: "ライバル偏差", type: "rivalBias", visible: true },
+
     { id: "ライバル増加率", label: "ライバル<br>増加率", visible: false },
     { id: "在庫数", label: "在庫数", visible: true },
     { id: "Keepaリンク", label: "Keepa<br>(アメリカAmazon)", visible: true },
@@ -791,10 +806,13 @@
     { id: "仕入合計", label: "仕入合計", visible: false },
     { id: "仕入計", label: "仕入計", visible: false },
     { id: "重量kg", label: "重量<br>（kg）", visible: true },
+
+    { id: "サイズまとめ", label: "サイズ<br>(縦×横×高さ)", type: "size", visible: true },
     { id: "サイズ感", label: "サイズ感", visible: false },
-    { id: "縦cm", label: "縦(cm)", visible: false },
-    { id: "横cm", label: "横(cm)", visible: false },
-    { id: "高さcm", label: "高さ(cm)", visible: false },
+    { id: "縦cm", label: "縦cm", visible: false },
+    { id: "横cm", label: "横cm", visible: false },
+    { id: "高さcm", label: "高さcm", visible: false },
+
     { id: "容積重量", label: "容積重量", visible: false },
     { id: "材質", label: "材質", visible: false },
     { id: "大型", label: "大型", visible: false },
@@ -872,11 +890,7 @@
     visibleColumns().forEach(col => {
       const th = document.createElement("th");
       th.dataset.colId = col.id;
-      if (col.id === "_ROW_ACTIONS") {
-        th.draggable = false;
-      } else {
-        th.draggable = true;
-      }
+      th.draggable = col.id !== "_ROW_ACTIONS";
 
       const inner = document.createElement("div");
       inner.className = "th-inner";
@@ -941,6 +955,7 @@
       td.dataset.colId = col.id;
 
       if (col.type === "asinInput") {
+        td.classList.add("input-cell");
         const input = document.createElement("input");
         input.type = "text";
         input.className = "asin-input";
@@ -964,7 +979,6 @@
         td.appendChild(btn);
       } else {
         td.classList.add("readonly-cell");
-        td.textContent = "";
       }
 
       tr.appendChild(td);
@@ -990,7 +1004,6 @@
         const cell = row.querySelector(`td[data-col-id="${col.id}"]`);
         if (!cell) return;
         cell.innerHTML = "";
-        cell.textContent = "";
       });
       row.dataset.loaded = "false";
       return;
@@ -1000,6 +1013,42 @@
       if (col.id === "ASIN" || col.type === "rowActions") return;
       const cell = row.querySelector(`td[data-col-id="${col.id}"]`);
       if (!cell) return;
+
+      // まとめ系（カテゴリ / 複数在庫指数 / ライバル偏差 / サイズ）
+      if (col.type === "category") {
+        cell.classList.add("multi-line");
+        const parent = data["親カテゴリ"] || "-";
+        const child = data["サブカテゴリ"] || "-";
+        cell.innerHTML = `【カテゴリ】<br>親：${parent}<br>子：${child}`;
+        return;
+      }
+      if (col.type === "multiIndex") {
+        cell.classList.add("multi-line");
+        const v45 = data["複数在庫指数45日分"] ?? "-";
+        const v60 = data["複数在庫指数60日分"] ?? "-";
+        cell.innerHTML = `【複数在庫指数】<br>45日：${v45}<br>60日：${v60}`;
+        return;
+      }
+      if (col.type === "rivalBias") {
+        cell.classList.add("multi-line");
+        const v1 = data["ライバル偏差1"] ?? "-";
+        const v2 = data["ライバル偏差2"] ?? "-";
+        cell.innerHTML = `【ライバル偏差】<br>×1：${v1}<br>×2：${v2}`;
+        return;
+      }
+      if (col.type === "size") {
+        const v = data["縦cm"];
+        const h = data["横cm"];
+        const t = data["高さcm"];
+        if (v != null && h != null && t != null) {
+          cell.textContent = `${v}×${h}×${t}`;
+        } else {
+          cell.textContent = "";
+        }
+        return;
+      }
+
+      // それ以外の特殊系
       const value = data[col.id] ?? "";
 
       if (col.type === "image") {
@@ -1271,4 +1320,3 @@
 </script>
 </body>
 </html>
-
