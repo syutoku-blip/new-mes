@@ -13,8 +13,12 @@ const basicTitle = document.getElementById("basicTitle");
 const basicBrand = document.getElementById("basicBrand");
 const basicRating = document.getElementById("basicRating");
 const basicASIN = document.getElementById("basicASIN");
+const basicAsinJP = document.getElementById("basicAsinJP");
+const basicJAN = document.getElementById("basicJAN");
+const basicSKU = document.getElementById("basicSKU");
 const basicCatParent = document.getElementById("basicCatParent");
 const basicCatChild = document.getElementById("basicCatChild");
+const basicSales30 = document.getElementById("basicSales30");
 const basicWarning = document.getElementById("basicWarning");
 
 const centerFBA = document.getElementById("centerFBA");
@@ -29,7 +33,7 @@ const chkSupplyPrice = document.getElementById("chkSupplyPrice");
 const mainChartCanvas = document.getElementById("mainChart");
 let mainChartInstance = null;
 
-/* ========= 疑似乱数（ASINごと固定） ========= */
+/* ========= 疑似乱数 ========= */
 function createPRNG(seedStr) {
   let seed = 0;
   for (let i = 0; i < seedStr.length; i++) seed += seedStr.charCodeAt(i);
@@ -39,7 +43,7 @@ function createPRNG(seedStr) {
   };
 }
 
-/* ========= 180日分のランキング・セラー数・価格を生成 ========= */
+/* ========= 180日分のランキング・セラー数・価格 ========= */
 function getDemandSupplySeries(asin) {
   const rand = createPRNG(asin);
   const days = 180;
@@ -76,7 +80,7 @@ function getDemandSupplySeries(asin) {
   };
 }
 
-/* ========= グラフ描画（太線＋文字小＋余白少なめ） ========= */
+/* ========= グラフ描画 ========= */
 function renderChart(asin) {
   const series = getDemandSupplySeries(asin);
 
@@ -183,7 +187,7 @@ function renderChart(asin) {
   updateChartVisibility();
 }
 
-/* チェックボックスによる線のON/OFF */
+/* チェックボックスによる線の切り替え */
 function updateChartVisibility() {
   if (!mainChartInstance) return;
   const demandOn = chkDemandSupply.checked;
@@ -202,7 +206,7 @@ function updateChartVisibility() {
 chkDemandSupply.addEventListener("change", updateChartVisibility);
 chkSupplyPrice.addEventListener("change", updateChartVisibility);
 
-/* ========= 注意事項タグ描画 ========= */
+/* ========= 注意事項タグ ========= */
 function renderWarningTags(container, rawText) {
   container.innerHTML = "";
   const text = (rawText || "").trim();
@@ -244,7 +248,9 @@ function renderWarningTags(container, rawText) {
   container.appendChild(wrap);
 }
 
-/* ========= その他の指標テーブル関連 ========= */
+/* ========= その他の指標テーブル（前回と同じ） ========= */
+/* （長いのでそのままコピペして使ってください。ここでは省略しないで記載します） */
+
 const detailHeaderRow = document.getElementById("detailHeaderRow");
 const detailBodyRow   = document.getElementById("detailBodyRow");
 const detailHiddenBar = document.getElementById("detailHiddenBar");
@@ -331,7 +337,6 @@ function buildDetailHeader() {
     th.appendChild(inner);
     detailHeaderRow.appendChild(th);
 
-    /* ドラッグで列入れ替え */
     th.addEventListener("dragstart", e => {
       detailDragId = col.id;
       e.dataTransfer.effectAllowed = "move";
@@ -419,8 +424,12 @@ function renderDetail(asin, data) {
   basicBrand.textContent = data["ブランド"] || "";
   basicRating.textContent = data["レビュー評価"] || "";
   basicASIN.textContent = asin;
+  basicAsinJP.textContent = data["日本ASIN"] || "－";
+  basicJAN.textContent = data["JAN"] || "－";
+  basicSKU.textContent = data["SKU"] || "－";
   basicCatParent.textContent = data["親カテゴリ"] || "";
   basicCatChild.textContent = data["サブカテゴリ"] || "";
+  basicSales30.textContent = data["30日販売数"] != null ? `${data["30日販売数"]} 個` : "－";
   renderWarningTags(basicWarning, data["注意事項（警告系）"]);
 
   centerFBA.textContent = data["FBA最安値"] || "－";
@@ -438,6 +447,7 @@ function renderDetail(asin, data) {
   renderChart(asin);
 }
 
+/* ========= ビュークリア ========= */
 function clearViewWithMessage(msg) {
   summaryCard.style.display = "none";
   detailCard.style.display = "none";
@@ -470,7 +480,7 @@ asinInput.addEventListener("keydown", (e) => {
   }
 });
 
-/* ========= ASINカタログ表示 ========= */
+/* ========= ASINカタログ ========= */
 function initCatalog() {
   const asins = Object.keys(ASIN_DATA || {});
   headerStatus.textContent = `登録ASIN数：${asins.length}件`;
