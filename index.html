@@ -1019,21 +1019,21 @@
         cell.classList.add("multi-line");
         const parent = data["親カテゴリ"] || "-";
         const child = data["サブカテゴリ"] || "-";
-        cell.innerHTML = `【カテゴリ】<br>親：${parent}<br>子：${child}`;
+        cell.innerHTML = `<br>親：${parent}<br>子：${child}`;
         return;
       }
       if (col.type === "multiIndex") {
         cell.classList.add("multi-line");
         const v45 = data["複数在庫指数45日分"] ?? "-";
         const v60 = data["複数在庫指数60日分"] ?? "-";
-        cell.innerHTML = `【複数在庫指数】<br>45日：${v45}<br>60日：${v60}`;
+        cell.innerHTML = `<br>45日：${v45}<br>60日：${v60}`;
         return;
       }
       if (col.type === "rivalBias") {
         cell.classList.add("multi-line");
         const v1 = data["ライバル偏差1"] ?? "-";
         const v2 = data["ライバル偏差2"] ?? "-";
-        cell.innerHTML = `【ライバル偏差】<br>×1：${v1}<br>×2：${v2}`;
+        cell.innerHTML = `<br>×1：${v1}<br>×2：${v2}`;
         return;
       }
       if (col.type === "size") {
