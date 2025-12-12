@@ -197,6 +197,30 @@
       margin-bottom: 3px;
     }
 
+    /* 注意事項タグ */
+    .warning-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 3px;
+      margin-top: 2px;
+    }
+    .warning-tag {
+      font-size: 10px;
+      border-radius: 999px;
+      padding: 1px 6px;
+      color: #fff;
+      font-weight: 600;
+    }
+    .warning-export-ban      { background:#ef4444; } /* 輸出不可: 赤 */
+    .warning-ip              { background:#8b5cf6; } /* 知財: 紫 */
+    .warning-large           { background:#f97316; } /* 大型: オレンジ */
+    .warning-ship-ban        { background:#6b7280; } /* 出荷禁止: グレー */
+    .warning-approval        { background:#0ea5e9; } /* 承認要: 青 */
+    .warning-variation       { background:#22c55e; } /* バリエーション: 緑 */
+    .warning-plain {
+      background:#f97316;
+    }
+
     /* 中央: 価格＆利益 */
     .summary-center {
       background: #fefce8;
@@ -272,7 +296,7 @@
       margin-top: 1px;
     }
 
-    /* ====== 下段：その他の項目 ====== */
+    /* ====== プレースホルダー ====== */
     .detail-card {
       background: var(--bg-card);
       border-radius: 12px;
@@ -286,40 +310,136 @@
       border-left: 3px solid var(--accent);
       padding-left: 8px;
     }
-    .detail-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill,minmax(190px,1fr));
-      gap: 6px 16px;
-      font-size: 11px;
-    }
-    .detail-item-label {
-      color: var(--text-muted);
-      margin-bottom: 1px;
-    }
-    .detail-item-value {
-      font-weight: 500;
-      word-break: break-all;
-    }
-    .detail-item a {
-      text-decoration: none;
-      color: #4338ca;
-      font-weight: 600;
-      font-size: 11px;
-    }
-
     .placeholder {
       padding: 12px 16px;
       font-size: 12px;
       color: var(--text-muted);
     }
 
+    /* ====== その他の指標：テーブル ====== */
+    .detail-table-wrapper {
+      background: transparent;
+    }
+    .detail-table-container {
+      background: var(--bg-card);
+      border-radius: 12px;
+      box-shadow: 0 6px 18px rgba(15,23,42,.10);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .detail-table-header-bar {
+      padding: 7px 10px;
+      background: linear-gradient(90deg,#f9fafb,#eef2ff);
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .detail-table-header-bar small {
+      font-size: 10px;
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+    .detail-hidden-bar {
+      padding: 4px 10px 2px;
+      display: none;
+      flex-wrap: wrap;
+      gap: 4px;
+      font-size: 10px;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      background:#f9fafb;
+    }
+    .detail-hidden-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      padding: 1px 6px;
+      border-radius: 999px;
+      border: 1px dashed #c7d2fe;
+      background:#eef2ff;
+    }
+    .detail-hidden-pill button {
+      border:none;
+      background:transparent;
+      font-size:11px;
+      color:#4f46e5;
+      cursor:pointer;
+    }
+
+    .detail-table-scroll {
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+    table.detail-table {
+      border-collapse: separate;
+      border-spacing: 0;
+      min-width: 900px;
+      font-size: 10px;
+      line-height: 1.3;
+    }
+    .detail-table thead {
+      background: linear-gradient(180deg,var(--bg-card),var(--bg-header2));
+    }
+    .detail-table th,
+    .detail-table td {
+      padding: 4px 6px;
+      border-bottom: 1px solid var(--border);
+      border-right: 1px solid var(--border);
+      max-width: 130px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      text-align: left;
+    }
+    .detail-table th {
+      font-weight: 600;
+      color: var(--text-muted);
+      text-align: center;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      cursor: grab;
+      user-select: none;
+    }
+    .detail-table th .th-inner {
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:4px;
+    }
+    .detail-table th .th-label {
+      font-size:10px;
+    }
+    .detail-table th .th-toggle {
+      border:none;
+      background:transparent;
+      font-size:11px;
+      cursor:pointer;
+      color:#9ca3af;
+      padding:0 2px;
+    }
+    .detail-table th .th-toggle:hover {
+      color:#ef4444;
+    }
+    .detail-table th.drag-over {
+      outline:2px dashed #c7d2fe;
+      background:#e5e7ff;
+    }
+    .detail-table-footer {
+      padding: 5px 10px;
+      font-size: 10px;
+      color: var(--text-muted);
+      border-top:1px solid var(--border);
+      background:#f9fafb;
+    }
+
     @media (max-width: 900px) {
-      .summary-card {
-        grid-template-columns: 1fr;
-      }
-      .summary-right {
-        min-height: 190px;
-      }
+      .summary-card { grid-template-columns: 1fr; }
+      .summary-right { min-height: 190px; }
     }
     @media (max-width: 600px) {
       header { flex-direction: column; align-items: flex-start; }
@@ -333,7 +453,7 @@
   <header>
     <div>
       <h1>MES-AI-A ASIN 詳細ビュー（2ページ目）</h1>
-      <div class="subtitle">ASINを入力すると、上段1枠に基本情報＋利益＋180日グラフ、下段にその他の指標が表示されます。</div>
+      <div class="subtitle">ASINを入力すると、上段1枠に基本情報＋利益＋180日グラフ、下段に横スクロール可能な詳細テーブルが表示されます。</div>
     </div>
     <div id="headerStatus" class="status"></div>
   </header>
@@ -387,7 +507,9 @@
             <div class="summary-basic-row">
               <div class="summary-basic-label">注意事項：</div>
             </div>
-            <div style="font-size:10px;color:#b91c1c;" id="basicWarning"></div>
+            <div id="basicWarning" style="font-size:10px;">
+              <!-- タグをここに -->
+            </div>
           </div>
         </div>
 
@@ -448,10 +570,28 @@
         </div>
       </div>
 
-      <!-- 下段：その他の項目 -->
-      <div id="detailCard" class="detail-card" style="display:none;">
-        <div class="detail-title">その他の指標</div>
-        <div id="detailGrid" class="detail-grid"></div>
+      <!-- 下段：その他の指標（テーブル） -->
+      <div id="detailCard" class="detail-table-wrapper" style="display:none;">
+        <div class="detail-table-container">
+          <div class="detail-table-header-bar">
+            <span>その他の指標</span>
+            <small>ヘッダーをドラッグで並び替え、「−」で列を非表示にできます。</small>
+          </div>
+          <div id="detailHiddenBar" class="detail-hidden-bar"></div>
+          <div class="detail-table-scroll">
+            <table id="detailTable" class="detail-table">
+              <thead>
+                <tr id="detailHeaderRow"></tr>
+              </thead>
+              <tbody>
+                <tr id="detailBodyRow"></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="detail-table-footer">
+            横スクロールで全項目を確認できます。非表示にした列は上部のバーから「＋」で再表示できます。
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -461,7 +601,7 @@
 <script src="asin-data.js"></script>
 
 <script>
-  /* ========= ユーティリティ ========= */
+  /* ========= 共通要素 ========= */
   const asinInput = document.getElementById("asinInput");
   const loadBtn = document.getElementById("loadBtn");
   const headerStatus = document.getElementById("headerStatus");
@@ -470,7 +610,6 @@
   const summaryCard = document.getElementById("summaryCard");
   const placeholderCard = document.getElementById("placeholder");
   const detailCard = document.getElementById("detailCard");
-  const detailGrid = document.getElementById("detailGrid");
 
   const prodImage = document.getElementById("prodImage");
   const basicTitle = document.getElementById("basicTitle");
@@ -493,6 +632,7 @@
 
   let mainChartInstance = null;
 
+  /* ========= 需給グラフ用疑似データ ========= */
   function createPRNG(seedStr) {
     let seed = 0;
     for (let i = 0; i < seedStr.length; i++) seed += seedStr.charCodeAt(i);
@@ -529,7 +669,7 @@
     return { labels, ranking, sellers, price };
   }
 
-  /* ========= グラフ ========= */
+  /* ========= グラフ描画 ========= */
   function updateChartVisibility() {
     if (!mainChartInstance) return;
     const demandOn = chkDemandSupply.checked;
@@ -538,15 +678,12 @@
     let showRank = true, showSeller = true, showPrice = true;
 
     if (demandOn && !supplyPriceOn) {
-      // 需要＆供給
       showRank = true; showSeller = true; showPrice = false;
     } else if (!demandOn && supplyPriceOn) {
-      // 供給＆価格
       showRank = false; showSeller = true; showPrice = true;
     } else if (demandOn && supplyPriceOn) {
       showRank = true; showSeller = true; showPrice = true;
     } else {
-      // どちらもOFF → 全表示
       showRank = true; showSeller = true; showPrice = true;
     }
 
@@ -601,7 +738,6 @@
       }
     });
 
-    // デフォルトは《需要＆供給》のみON
     chkDemandSupply.checked = true;
     chkSupplyPrice.checked = false;
     updateChartVisibility();
@@ -610,46 +746,211 @@
   chkDemandSupply.addEventListener("change", updateChartVisibility);
   chkSupplyPrice.addEventListener("change", updateChartVisibility);
 
-  /* ========= 詳細描画 ========= */
-  const DETAIL_FIELDS = [
-    { key: "アメリカASIN", label: "アメリカASIN" },
-    { key: "日本ASIN", label: "日本ASIN" },
-    { key: "JAN", label: "JAN" },
-    { key: "SKU", label: "SKU" },
-    { key: "個数", label: "個数" },
-    { key: "30日販売数", label: "30日販売数" },
-    { key: "90日販売数", label: "90日販売数" },
-    { key: "180日販売数", label: "180日販売数" },
-    { key: "複数在庫指数45日分", label: "複数在庫指数 45日分" },
-    { key: "複数在庫指数60日分", label: "複数在庫指数 60日分" },
-    { key: "ライバル偏差1", label: "ライバル偏差 ×1" },
-    { key: "ライバル偏差2", label: "ライバル偏差 ×2" },
-    { key: "ライバル増加率", label: "ライバル増加率" },
-    { key: "在庫数", label: "在庫数" },
-    { key: "FBA出品", label: "FBA出品" },
-    { key: "返品率", label: "返品率" },
-    { key: "カートボックス価格", label: "カートボックス価格" },
-    { key: "販売額（ドル）", label: "販売額（ドル）" },
-    { key: "入金額（円）", label: "入金額（円）" },
-    { key: "入金額計（円）", label: "入金額計（円）" },
-    { key: "粗利益率予測", label: "粗利益率予測" },
-    { key: "粗利益予測", label: "粗利益予測" },
-    { key: "粗利益", label: "粗利益" },
-    { key: "仕入れ目安単価", label: "仕入れ目安単価" },
-    { key: "仕入合計", label: "仕入合計" },
-    { key: "仕入計", label: "仕入計" },
-    { key: "重量kg", label: "重量（kg）" },
-    { key: "サイズ", label: "サイズ（縦×横×高さ）" },
-    { key: "サイズ感", label: "サイズ感" },
-    { key: "容積重量", label: "容積重量" },
-    { key: "材質", label: "材質" },
-    { key: "大型", label: "大型判定" },
-    { key: "請求重量", label: "請求重量" },
-    { key: "想定送料", label: "想定送料" },
-    { key: "送料", label: "送料" },
-    { key: "関税", label: "関税" }
+  /* ========= 注意事項タグ ========= */
+  function renderWarningTags(container, rawText) {
+    container.innerHTML = "";
+    const text = (rawText || "").trim();
+    if (!text) {
+      container.textContent = "－";
+      return;
+    }
+
+    const tags = [];
+    const pushIfIncluded = (keyword, className) => {
+      if (text.includes(keyword)) {
+        tags.push({ label: keyword, cls: className });
+      }
+    };
+
+    pushIfIncluded("輸出不可", "warning-export-ban");
+    pushIfIncluded("知財",     "warning-ip");
+    pushIfIncluded("大型",     "warning-large");
+    pushIfIncluded("出荷禁止", "warning-ship-ban");
+    pushIfIncluded("承認要",   "warning-approval");
+    pushIfIncluded("バリエーション", "warning-variation");
+
+    const wrap = document.createElement("div");
+    wrap.className = "warning-tags";
+
+    if (!tags.length) {
+      // キーワードに当てはまらない場合は1つのタグとして表示
+      const span = document.createElement("span");
+      span.className = "warning-tag warning-plain";
+      span.textContent = text;
+      wrap.appendChild(span);
+    } else {
+      tags.forEach(t => {
+        const span = document.createElement("span");
+        span.className = "warning-tag " + t.cls;
+        span.textContent = t.label;
+        wrap.appendChild(span);
+      });
+    }
+    container.appendChild(wrap);
+  }
+
+  /* ========= その他の指標テーブル ========= */
+  const detailTable = document.getElementById("detailTable");
+  const detailHeaderRow = document.getElementById("detailHeaderRow");
+  const detailBodyRow   = document.getElementById("detailBodyRow");
+  const detailHiddenBar = document.getElementById("detailHiddenBar");
+
+  const DETAIL_COLUMNS_DEF = [
+    { id: "アメリカASIN", label: "アメリカASIN", visible:true },
+    { id: "日本ASIN",     label: "日本ASIN",     visible:true },
+    { id: "JAN",          label: "JAN",          visible:true },
+    { id: "SKU",          label: "SKU",          visible:true },
+    { id: "個数",         label: "個数",         visible:true },
+    { id: "30日販売数",   label: "30日販売数",   visible:true },
+    { id: "90日販売数",   label: "90日販売数",   visible:false },
+    { id: "180日販売数",  label: "180日販売数",  visible:false },
+    { id: "複数在庫指数45日分", label: "複数在庫指数45日分", visible:false },
+    { id: "複数在庫指数60日分", label: "複数在庫指数60日分", visible:false },
+    { id: "ライバル偏差1", label: "ライバル偏差×1", visible:false },
+    { id: "ライバル偏差2", label: "ライバル偏差×2", visible:false },
+    { id: "ライバル増加率", label: "ライバル増加率", visible:false },
+    { id: "在庫数",       label: "在庫数",       visible:true },
+    { id: "返品率",       label: "返品率",       visible:true },
+    { id: "販売額（ドル）", label:"販売額（ドル）", visible:true },
+    { id: "入金額（円）",  label:"入金額（円）",  visible:true },
+    { id: "入金額計（円）", label:"入金額計（円）", visible:false },
+    { id: "粗利益率予測", label:"粗利益率予測", visible:true },
+    { id: "粗利益予測",   label:"粗利益予測",   visible:true },
+    { id: "粗利益",       label:"粗利益",       visible:false },
+    { id: "仕入れ目安単価", label:"仕入れ目安単価", visible:true },
+    { id: "仕入合計",     label:"仕入合計",     visible:false },
+    { id: "仕入計",       label:"仕入計",       visible:false },
+    { id: "重量kg",       label:"重量（kg）",   visible:true },
+    { id: "サイズ",       label:"サイズ（縦×横×高さ）", visible:true },
+    { id: "サイズ感",     label:"サイズ感",     visible:false },
+    { id: "容積重量",     label:"容積重量",     visible:false },
+    { id: "材質",         label:"材質",         visible:true },
+    { id: "大型",         label:"大型判定",     visible:true },
+    { id: "請求重量",     label:"請求重量",     visible:false },
+    { id: "想定送料",     label:"想定送料",     visible:true },
+    { id: "送料",         label:"送料",         visible:false },
+    { id: "関税",         label:"関税",         visible:true },
+    { id: "Keepaリンク",  label:"Keepa (US)",   visible:true }
   ];
 
+  let detailColumns = DETAIL_COLUMNS_DEF.map(c => ({...c}));
+  let detailDragId = null;
+
+  function detailVisibleCols() {
+    return detailColumns.filter(c => c.visible !== false);
+  }
+
+  function buildDetailHeader() {
+    detailHeaderRow.innerHTML = "";
+    detailVisibleCols().forEach(col => {
+      const th = document.createElement("th");
+      th.dataset.colId = col.id;
+      th.draggable = true;
+
+      const inner = document.createElement("div");
+      inner.className = "th-inner";
+
+      const labelSpan = document.createElement("span");
+      labelSpan.className = "th-label";
+      labelSpan.textContent = col.label;
+      inner.appendChild(labelSpan);
+
+      const toggleBtn = document.createElement("button");
+      toggleBtn.className = "th-toggle";
+      toggleBtn.textContent = "−";
+      toggleBtn.title = "この列を非表示にする";
+      toggleBtn.addEventListener("click", (e)=> {
+        e.stopPropagation();
+        col.visible = false;
+        rebuildDetailTable(lastDetailData);
+      });
+      inner.appendChild(toggleBtn);
+
+      th.appendChild(inner);
+      detailHeaderRow.appendChild(th);
+
+      th.addEventListener("dragstart", e => {
+        detailDragId = col.id;
+        e.dataTransfer.effectAllowed = "move";
+      });
+      th.addEventListener("dragover", e => {
+        e.preventDefault();
+        th.classList.add("drag-over");
+        e.dataTransfer.dropEffect = "move";
+      });
+      th.addEventListener("dragleave", ()=> th.classList.remove("drag-over"));
+      th.addEventListener("drop", e => {
+        e.preventDefault();
+        th.classList.remove("drag-over");
+        const targetId = col.id;
+        if (!detailDragId || detailDragId === targetId) return;
+        const srcIndex = detailColumns.findIndex(c=>c.id===detailDragId);
+        const dstIndex = detailColumns.findIndex(c=>c.id===targetId);
+        if (srcIndex === -1 || dstIndex === -1) return;
+        const [moved] = detailColumns.splice(srcIndex,1);
+        detailColumns.splice(dstIndex,0,moved);
+        detailDragId = null;
+        rebuildDetailTable(lastDetailData);
+      });
+    });
+  }
+
+  function renderDetailHiddenBar() {
+    const hidden = detailColumns.filter(c => !c.visible);
+    detailHiddenBar.innerHTML = "";
+    if (!hidden.length) {
+      detailHiddenBar.style.display = "none";
+      return;
+    }
+    detailHiddenBar.style.display = "flex";
+    hidden.forEach(col => {
+      const pill = document.createElement("div");
+      pill.className = "detail-hidden-pill";
+      pill.innerHTML = `<span>${col.label}</span>`;
+      const btn = document.createElement("button");
+      btn.textContent = "＋";
+      btn.title = "この列を再表示";
+      btn.addEventListener("click", ()=> {
+        col.visible = true;
+        rebuildDetailTable(lastDetailData);
+      });
+      pill.appendChild(btn);
+      detailHiddenBar.appendChild(pill);
+    });
+  }
+
+  let lastDetailData = null;
+
+  function fillDetailRow(data) {
+    detailBodyRow.innerHTML = "";
+    if (!data) return;
+    detailVisibleCols().forEach(col => {
+      const td = document.createElement("td");
+      td.dataset.colId = col.id;
+      const value = data[col.id];
+
+      if (col.id === "Keepaリンク" && value) {
+        const a = document.createElement("a");
+        a.href = value;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        a.textContent = "グラフを開く";
+        td.appendChild(a);
+      } else {
+        td.textContent = value === undefined || value === "" ? "－" : value;
+      }
+      detailBodyRow.appendChild(td);
+    });
+  }
+
+  function rebuildDetailTable(data) {
+    lastDetailData = data;
+    buildDetailHeader();
+    fillDetailRow(data);
+    renderDetailHiddenBar();
+  }
+
+  /* ========= 詳細描画 ========= */
   function renderDetail(asin, data) {
     // 上段
     prodImage.src = data["商品画像"] || "";
@@ -660,7 +961,7 @@
     basicASIN.textContent = asin;
     basicCatParent.textContent = data["親カテゴリ"] || "";
     basicCatChild.textContent = data["サブカテゴリ"] || "";
-    basicWarning.textContent = data["注意事項（警告系）"] || "－";
+    renderWarningTags(basicWarning, data["注意事項（警告系）"]);
 
     centerFBA.textContent = data["FBA最安値"] || "－";
     centerFBA3m.textContent = data["過去3月FBA最安値"] || "－";
@@ -671,44 +972,8 @@
     summaryCard.style.display = "grid";
     placeholderCard.style.display = "none";
 
-    // 下段その他
-    detailGrid.innerHTML = "";
-    DETAIL_FIELDS.forEach(field => {
-      const v = data[field.key];
-      if (v === undefined || v === "") return;
-      const item = document.createElement("div");
-      item.className = "detail-item";
-      const label = document.createElement("div");
-      label.className = "detail-item-label";
-      label.textContent = field.label;
-      const value = document.createElement("div");
-      value.className = "detail-item-value";
-      value.textContent = v;
-      item.appendChild(label);
-      item.appendChild(value);
-      detailGrid.appendChild(item);
-    });
-
-    // Keepaリンクだけ別扱い
-    if (data["Keepaリンク"]) {
-      const item = document.createElement("div");
-      item.className = "detail-item";
-      const label = document.createElement("div");
-      label.className = "detail-item-label";
-      label.textContent = "Keepa (アメリカAmazon)";
-      const value = document.createElement("div");
-      value.className = "detail-item-value";
-      const a = document.createElement("a");
-      a.href = data["Keepaリンク"];
-      a.target = "_blank";
-      a.rel = "noopener noreferrer";
-      a.textContent = "グラフを開く";
-      value.appendChild(a);
-      item.appendChild(label);
-      item.appendChild(value);
-      detailGrid.appendChild(item);
-    }
-
+    // 下段テーブル
+    rebuildDetailTable(data);
     detailCard.style.display = "block";
 
     renderChart(asin);
@@ -770,6 +1035,8 @@
 
   /* ========= 初期化 ========= */
   initCatalog();
+  buildDetailHeader(); // 初期構築（空データ）
+  renderDetailHiddenBar();
 </script>
 </body>
 </html>
