@@ -3,8 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <title>MES-AI-A ASINリサーチテーブル</title>
+
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
   <style>
     :root {
       --bg-main: #f5f7fb;
@@ -150,7 +152,6 @@
       border-radius: 999px;
       background: #f3f4ff;
       border: 1px dashed #c7d2fe;
-      cursor: default;
     }
     .hidden-col-pill button {
       border: none;
@@ -333,6 +334,23 @@
     .modal-chart-container {
       height: 360px;
     }
+    .modal-toggle-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 4px 0 6px;
+      font-size: 11px;
+    }
+    .modal-toggle-row label {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+    }
+    .modal-toggle-row input[type="checkbox"] {
+      width: 13px;
+      height: 13px;
+    }
 
     @media (max-width: 768px) {
       header { flex-direction: column; align-items: flex-start; }
@@ -378,11 +396,24 @@
         </div>
         <button id="demandModalCloseBtn" class="modal-close-btn">閉じる</button>
       </div>
+
+      <!-- チェックボックス：□《需要＆供給》 / □《供給＆価格》 -->
+      <div class="modal-toggle-row">
+        <label>
+          <input type="checkbox" id="chkDemandSupply">
+          《需要＆供給》（ランキング＋セラー数）
+        </label>
+        <label>
+          <input type="checkbox" id="chkSupplyPrice">
+          《供給＆価格》（セラー数＋価格）
+        </label>
+      </div>
+
       <div class="modal-chart-container">
         <canvas id="demandModalChart"></canvas>
       </div>
       <div class="modal-subtitle">
-        ※ホバーで「ランキング / セラー数 / 価格」の詳細な数値を確認できます。
+        ※チェックボックスで表示する線を切り替えできます。ホバーで詳細数値を確認できます。
       </div>
     </div>
   </div>
@@ -403,14 +434,17 @@
       </div>
     </div>
     <div class="helper-text">
-      ・列ヘッダーは固定され、横スクロールで全項目を確認できます。<br>
-      ・実運用では ASIN_DATA 部分をAPI連携などに差し替える想定です。
+      ・実運用では ASIN_DATA をAPI連携などに差し替える想定です。<br>
+      ・需給グラフ列をクリックすると、拡大グラフが表示されます。
     </div>
   </div>
 </div>
 
+<!-- ★ ASINデータを別ファイルから読み込む -->
+<script src="asin-data.js"></script>
+
 <script>
-  // ==== 列定義 ====
+  // ===== 列定義 =====
   const BASE_COLUMNS = [
     { id: "ASIN", label: "ASIN", type: "asinInput", visible: true },
     { id: "商品画像", label: "商品画像", type: "image", visible: true },
@@ -436,7 +470,7 @@
     { id: "入金額計（円）", label: "入金額計（円）", visible: false },
     {
       id: "需給推移",
-      label: "需給推移<br>☐《需要＆供給》<br>☐《供給＆価格》<br>☐《レビュー数＆●●》",
+      label: "需給推移<br>□《需要＆供給》<br>□《供給＆価格》",
       visible: true
     },
     { id: "30日販売数", label: "30日<br>販売数", visible: true },
@@ -477,20 +511,7 @@
   ];
   let columns = BASE_COLUMNS.map(c => ({ ...c }));
 
-  // ==== ダミーASINデータ（グラフ項目は空欄保持） ====
-  const ASIN_DATA = {
-    /* 5件分：前の回答と同じ内容。省略せずそのまま入れてあります。 */
-    "B0A0000001": { /* ...内容は前の回答と同じ... */ },
-    "B0A0000002": { /* ... */ },
-    "B0A0000003": { /* ... */ },
-    "B0A0000004": { /* ... */ },
-    "B0A0000005": { /* ... */ }
-  };
-
-  /* ↑↑↑ 省略部分を実際にはすべて埋めてください（前メッセージの ASIN_DATA と同じ） */
-
-  // ===== ここからロジック =====
-
+  // ===== DOM参照 =====
   const headerRow = document.getElementById("tableHeaderRow");
   const tbody = document.getElementById("tableBody");
   const headerStatus = document.getElementById("headerStatus");
@@ -501,6 +522,8 @@
   const demandModalCloseBtn = document.getElementById("demandModalCloseBtn");
   const demandModalSubtitle = document.getElementById("demandModalSubtitle");
   const demandModalChartCanvas = document.getElementById("demandModalChart");
+  const chkDemandSupply = document.getElementById("chkDemandSupply");
+  const chkSupplyPrice = document.getElementById("chkSupplyPrice");
   let demandModalChartInstance = null;
 
   const globalInput = document.getElementById("globalAsinInput");
@@ -513,7 +536,7 @@
     return columns.filter(c => c.visible !== false);
   }
 
-  // 疑似乱数 & 需給データ生成
+  // ==== 需給データ生成 ====
   function createPRNG(seedStr) {
     let seed = 0;
     for (let i = 0; i < seedStr.length; i++) seed += seedStr.charCodeAt(i);
@@ -549,7 +572,7 @@
     return { labels, ranking, sellers, price };
   }
 
-  // ヘッダー描画（ドラッグ＆−ボタン付き）
+  // ==== ヘッダー（ドラッグ & 非表示） ====
   function buildHeader() {
     headerRow.innerHTML = "";
     visibleColumns().forEach(col => {
@@ -740,7 +763,7 @@
     asins.forEach(asin => createRow(asin));
   }
 
-  // ミニグラフ & モーダル
+  // ==== ミニグラフ ====
   function renderDemandSparkline(cell, asin) {
     if (!ASIN_DATA[asin]) {
       cell.textContent = "";
@@ -786,6 +809,50 @@
     });
 
     container.addEventListener("click", () => openDemandModal(asin, data));
+  }
+
+  // ==== 拡大グラフ（チェックボックス連動） ====
+  function applyModalCheckboxVisibility() {
+    if (!demandModalChartInstance) return;
+    const ds = demandModalChartInstance.data.datasets;
+
+    // デフォルト：全部表示
+    let showRank = true;
+    let showSeller = true;
+    let showPrice = true;
+
+    const demandOn = chkDemandSupply.checked;
+    const supplyPriceOn = chkSupplyPrice.checked;
+
+    // どちらか一つだけONにして使う運用
+    if (demandOn && !supplyPriceOn) {
+      // 《需要＆供給》：ランキング＋セラー数
+      showRank = true;
+      showSeller = true;
+      showPrice = false;
+    } else if (!demandOn && supplyPriceOn) {
+      // 《供給＆価格》：セラー数＋価格
+      showRank = false;
+      showSeller = true;
+      showPrice = true;
+    } else if (demandOn && supplyPriceOn) {
+      // 両方ON → 全部表示
+      showRank = true;
+      showSeller = true;
+      showPrice = true;
+    } else {
+      // 両方OFFになったら、とりあえず全部表示
+      showRank = true;
+      showSeller = true;
+      showPrice = true;
+    }
+
+    // datasets[0]=ランキング, [1]=セラー数, [2]=価格
+    ds[0].hidden = !showRank;
+    ds[1].hidden = !showSeller;
+    ds[2].hidden = !showPrice;
+
+    demandModalChartInstance.update();
   }
 
   function openDemandModal(asin, data) {
@@ -834,6 +901,11 @@
         }
       }
     });
+
+    // モーダルを開いたらデフォルトは《需要＆供給》のみON
+    chkDemandSupply.checked = true;
+    chkSupplyPrice.checked = false;
+    applyModalCheckboxVisibility();
   }
 
   demandModalBackdrop.addEventListener("click", () => {
@@ -842,8 +914,10 @@
   demandModalCloseBtn.addEventListener("click", () => {
     demandModalBackdrop.classList.remove("open");
   });
+  chkDemandSupply.addEventListener("change", () => applyModalCheckboxVisibility());
+  chkSupplyPrice.addEventListener("change", () => applyModalCheckboxVisibility());
 
-  // 非表示列バー
+  // ==== 非表示列バー ====
   function renderHiddenColsBar() {
     const hiddenCols = columns.filter(c => !c.visible && c.id !== "ASIN" && c.id !== "_ROW_ACTIONS");
     hiddenColsBar.innerHTML = "";
@@ -869,11 +943,12 @@
     });
   }
 
-  // ASIN一覧・ステータス
+  // ==== ASIN一覧・ステータス ====
   function buildAsinCatalogAndStatus() {
-    const asins = Object.keys(ASIN_DATA);
+    const asins = Object.keys(ASIN_DATA || {});
     headerStatus.textContent = `登録ASIN数：${asins.length}件`;
     asinCatalog.innerHTML = "";
+    if (!asins.length) return;
     const label = document.createElement("span");
     label.className = "asin-catalog-label";
     label.textContent = "データがあるASIN：";
@@ -886,7 +961,7 @@
     });
   }
 
-  // 初期化
+  // ==== 初期化 ====
   buildAsinCatalogAndStatus();
   buildHeader();
   renderHiddenColsBar();
