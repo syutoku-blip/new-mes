@@ -22,7 +22,11 @@ body {
   font-size: 13px;
 }
 
-.app-shell { min-height: 100vh; display: flex; flex-direction: column; }
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
 
 /* ========== ヘッダーまわり ========== */
 header {
@@ -42,7 +46,6 @@ header h1 {
   margin: 0;
   font-size: 18px;
   font-weight: 700;
-  letter-spacing: .03em;
 }
 header .subtitle {
   font-size: 11px;
@@ -58,6 +61,7 @@ header .subtitle {
   white-space: nowrap;
 }
 
+/* ========== 上部ツールバー ========== */
 .toolbar {
   padding: 10px 24px 6px;
   display: flex;
@@ -101,6 +105,7 @@ header .subtitle {
   background:#eef2ff;
 }
 
+/* ========== 登録ASINピル ========== */
 .asin-catalog {
   padding: 4px 24px 10px;
   display: flex;
@@ -126,6 +131,7 @@ header .subtitle {
   border: 1px solid #c7d2fe;
 }
 
+/* ========== ページレイアウト ========== */
 .page-body {
   flex: 1;
   padding: 14px 20px 24px;
@@ -161,7 +167,7 @@ header .subtitle {
   min-height: 196px;
 }
 
-/* 左: 画像＋基本情報 */
+/* 左：画像＋基本情報 */
 .summary-left-inner {
   display: grid;
   grid-template-columns: 104px 1fr;
@@ -194,6 +200,7 @@ header .subtitle {
   padding: 1px 6px;
 }
 
+/* 基本情報テキスト */
 .summary-basic {
   font-size: 11px;
 }
@@ -232,15 +239,15 @@ header .subtitle {
   font-weight: 600;
   letter-spacing: .02em;
 }
-.warning-export-ban      { background:#ef4444; }
-.warning-ip              { background:#8b5cf6; }
-.warning-large           { background:#f97316; }
-.warning-ship-ban        { background:#6b7280; }
-.warning-approval        { background:#0ea5e9; }
-.warning-variation       { background:#22c55e; }
+.warning-export-ban      { background:#ef4444; } /* 輸出不可 */
+.warning-ip              { background:#8b5cf6; } /* 知財 */
+.warning-large           { background:#f97316; } /* 大型 */
+.warning-ship-ban        { background:#6b7280; } /* 出荷禁止 */
+.warning-approval        { background:#0ea5e9; } /* 承認要 */
+.warning-variation       { background:#22c55e; } /* バリエーション */
 .warning-plain           { background:#f97316; }
 
-/* 中央: 価格＆利益 */
+/* 中央：利益・販売予測 */
 .summary-center {
   background: #fefce8;
   border-radius: var(--radius-md);
@@ -273,7 +280,7 @@ header .subtitle {
   font-weight: 650;
 }
 
-/* 右: グラフ箱 */
+/* 右：グラフブロック */
 .summary-right {
   background: #eff6ff;
   border-radius: var(--radius-md);
@@ -313,12 +320,14 @@ header .subtitle {
   flex-direction: column;
   gap: 2px;
 }
+
+/* ★ グラフを枠いっぱいに表示する調整 */
 .graph-canvas-wrap {
   flex: 1;
-  min-height: 140px;
+  min-height: 155px;
   background:#dbeafe;
   border-radius: 8px;
-  padding:4px 4px 2px;
+  padding: 2px 2px 0 2px;
 }
 .graph-caption {
   font-size: 9px;
@@ -355,9 +364,10 @@ header .subtitle {
   color: var(--text-muted);
 }
 
-/* ========== その他の指標：テーブル ========== */
-.detail-table-wrapper { background: transparent; }
-
+/* ========== 下段：その他の指標テーブル ========== */
+.detail-table-wrapper {
+  background: transparent;
+}
 .detail-table-container {
   background: var(--bg-card);
   border-radius: var(--radius-lg);
@@ -366,7 +376,6 @@ header .subtitle {
   display: flex;
   flex-direction: column;
 }
-
 .detail-table-header-bar {
   padding: 8px 12px 6px;
   background: linear-gradient(90deg,#f9fafb,#eef2ff);
@@ -383,6 +392,7 @@ header .subtitle {
   font-weight: 400;
 }
 
+/* 隠し列バー */
 .detail-hidden-bar {
   padding: 4px 12px 3px;
   display: none;
@@ -411,6 +421,7 @@ header .subtitle {
   padding:0 0 0 1px;
 }
 
+/* テーブル本体 */
 .detail-table-scroll {
   overflow-x: auto;
   overflow-y: hidden;
@@ -501,6 +512,7 @@ table.detail-table {
   align-items:center;
 }
 
+/* ========== レスポンシブ ========== */
 @media (max-width: 900px) {
   .summary-card {
     grid-template-columns: 1fr;
@@ -510,8 +522,17 @@ table.detail-table {
   }
 }
 @media (max-width: 600px) {
-  header { flex-direction: column; align-items: flex-start; }
-  .toolbar { padding-inline: 16px; }
-  .page-body { padding-inline: 10px; }
-  .summary-card { padding-inline: 10px; }
+  header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .toolbar {
+    padding-inline: 16px;
+  }
+  .page-body {
+    padding-inline: 10px;
+  }
+  .summary-card {
+    padding-inline: 10px;
+  }
 }
