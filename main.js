@@ -14,6 +14,8 @@ const basicBrand = document.getElementById("basicBrand");
 const basicRating = document.getElementById("basicRating");
 const basicASIN = document.getElementById("basicASIN");
 const basicAsinGroup = document.getElementById("basicAsinGroup");
+const basicJAN = document.getElementById("basicJAN");
+const basicSKU = document.getElementById("basicSKU");
 const basicSize = document.getElementById("basicSize");
 const basicWeight = document.getElementById("basicWeight");
 const basicMaterial = document.getElementById("basicMaterial");
@@ -58,6 +60,7 @@ function getDemandSupplySeries(asin) {
 
   for (let i = days - 1; i >= 0; i--) {
     labels.push(`${i}日前`);
+
     rank += (rand() - 0.5) * 4000;
     rank = Math.max(5000, Math.min(80000, rank));
 
@@ -187,9 +190,10 @@ function renderChart(asin) {
   updateChartVisibility();
 }
 
-/* チェックボックスによる線の切り替え */
+/* ========= チェックボックスで線の表示切替 ========= */
 function updateChartVisibility() {
   if (!mainChartInstance) return;
+
   const demandOn = chkDemandSupply.checked;
   const supplyOn = chkSupplyPrice.checked;
 
@@ -206,7 +210,7 @@ function updateChartVisibility() {
 chkDemandSupply.addEventListener("change", updateChartVisibility);
 chkSupplyPrice.addEventListener("change", updateChartVisibility);
 
-/* ========= 注意事項タグ ========= */
+/* ========= 注意事項タグ描画 ========= */
 function renderWarningTags(container, rawText) {
   container.innerHTML = "";
   const text = (rawText || "").trim();
@@ -245,15 +249,17 @@ function renderWarningTags(container, rawText) {
       wrap.appendChild(span);
     });
   }
+
   container.appendChild(wrap);
 }
 
-/* ========= 下段テーブル ========= */
+/* ========= 下段テーブル定義 ========= */
+/* JAN / SKU / サイズ / 重量 / 材質 はテーブルから除外済み */
+
 const detailHeaderRow = document.getElementById("detailHeaderRow");
 const detailBodyRow   = document.getElementById("detailBodyRow");
 const detailHiddenBar = document.getElementById("detailHiddenBar");
 
-/* JAN / SKU / サイズ / 重量kg / 材質 は削除済み */
 const DETAIL_COLUMNS_DEF = [
   { id: "アメリカASIN",       label: "アメリカASIN",   sub:"US Listing",       visible:true  },
   { id: "日本ASIN",           label: "日本ASIN",       sub:"JP Listing",       visible:true  },
@@ -384,6 +390,7 @@ function renderDetailHiddenBar() {
 function fillDetailRow(data) {
   detailBodyRow.innerHTML = "";
   if (!data) return;
+
   visibleCols().forEach(col => {
     const td = document.createElement("td");
     td.dataset.colId = col.id;
@@ -412,6 +419,7 @@ function rebuildDetailTable(data) {
 
 /* ========= 詳細描画 ========= */
 function renderDetail(asin, data) {
+  // 画像 & 基本情報
   prodImage.src = data["商品画像"] || "";
   prodImage.alt = data["品名"] || asin;
   basicTitle.textContent = data["品名"] || "";
@@ -419,20 +427,26 @@ function renderDetail(asin, data) {
   basicRating.textContent = data["レビュー評価"] || "";
   basicASIN.textContent = asin;
 
+  // 各種ASIN（日本 / US）
   const jpAsin = data["日本ASIN"] || "－";
   const usAsin = data["アメリカASIN"] || asin;
-  const jan = data["JAN"] || "－";
-  const sku = data["SKU"] || "－";
-  basicAsinGroup.textContent = `日本: ${jpAsin} / US: ${usAsin} / JAN: ${jan} / SKU: ${sku}`;
+  basicAsinGroup.textContent = `日本: ${jpAsin} / US: ${usAsin}`;
 
+  // JAN / SKU
+  basicJAN.textContent = data["JAN"] || "－";
+  basicSKU.textContent = data["SKU"] || "－";
+
+  // サイズ / 重量 / 材質
   basicSize.textContent = data["サイズ"] || "－";
   basicWeight.textContent = data["重量kg"] || "－";
   basicMaterial.textContent = data["材質"] || "－";
 
+  // カテゴリ・注意事項
   basicCatParent.textContent = data["親カテゴリ"] || "";
   basicCatChild.textContent = data["サブカテゴリ"] || "";
   renderWarningTags(basicWarning, data["注意事項（警告系）"]);
 
+  // 中央：利益・販売予測
   centerFBA.textContent = data["FBA最安値"] || "－";
   centerFBA3m.textContent = data["過去3月FBA最安値"] || "－";
   centerMargin.textContent = data["粗利益率予測"] || "－";
@@ -454,7 +468,8 @@ function clearViewWithMessage(msg) {
   detailCard.style.display = "none";
   placeholderCard.style.display = "block";
   if (msg) {
-    placeholderCard.querySelector(".placeholder").textContent = msg;
+    const p = placeholderCard.querySelector(".placeholder");
+    if (p) p.textContent = msg;
   }
 }
 
