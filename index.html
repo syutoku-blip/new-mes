@@ -5,10 +5,7 @@
   <title>MES-AI-A 詳細ビュー</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- レイアウト用CSS -->
   <link rel="stylesheet" href="styles.css" />
-
-  <!-- Chart.js（グラフ用） -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -54,6 +51,7 @@
               </div>
               <div class="summary-basic">
                 <div id="basicTitle" class="summary-title"></div>
+
                 <div class="summary-basic-row">
                   <div class="summary-basic-label">ブランド</div>
                   <div id="basicBrand" class="summary-basic-value"></div>
@@ -62,10 +60,24 @@
                   <div class="summary-basic-label">評価</div>
                   <div id="basicRating" class="summary-basic-value"></div>
                 </div>
+
                 <div class="summary-basic-row">
                   <div class="summary-basic-label">ASIN</div>
                   <div id="basicASIN" class="summary-basic-value"></div>
                 </div>
+                <div class="summary-basic-row">
+                  <div class="summary-basic-label">日本ASIN</div>
+                  <div id="basicAsinJP" class="summary-basic-value"></div>
+                </div>
+                <div class="summary-basic-row">
+                  <div class="summary-basic-label">JAN</div>
+                  <div id="basicJAN" class="summary-basic-value"></div>
+                </div>
+                <div class="summary-basic-row">
+                  <div class="summary-basic-label">SKU</div>
+                  <div id="basicSKU" class="summary-basic-value"></div>
+                </div>
+
                 <div class="summary-basic-row">
                   <div class="summary-basic-label">カテゴリ</div>
                   <div class="summary-basic-value">
@@ -75,6 +87,11 @@
                   </div>
                 </div>
                 <div class="summary-basic-row">
+                  <div class="summary-basic-label">30日販売数</div>
+                  <div id="basicSales30" class="summary-basic-value"></div>
+                </div>
+
+                <div class="summary-basic-row" style="margin-top:4px;">
                   <div class="summary-basic-label">注意事項</div>
                 </div>
                 <div id="basicWarning" style="font-size:10px;"></div>
@@ -82,7 +99,7 @@
             </div>
           </div>
 
-          <!-- 中央：利益・販売予測 -->
+          <!-- 中央：利益・販売予測（見た目を左と合わせる） -->
           <div class="summary-column">
             <div class="summary-center">
               <div class="center-title">利益・販売予測</div>
@@ -112,7 +129,7 @@
             </div>
           </div>
 
-          <!-- 右：グラフ -->
+          <!-- 右：グラフ（見た目を左と合わせる） -->
           <div class="summary-column">
             <div class="summary-right">
               <div class="graph-header">
@@ -182,7 +199,6 @@
     </div>
   </div>
 
-  <!-- データとロジック -->
   <script src="asin-data.js"></script>
   <script src="main.js"></script>
 </body>
