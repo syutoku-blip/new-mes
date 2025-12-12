@@ -1,4 +1,4 @@
-/* ========= 共通要素 ========= */
+/* ========= DOM参照 ========= */
 const asinInput = document.getElementById("asinInput");
 const loadBtn = document.getElementById("loadBtn");
 const headerStatus = document.getElementById("headerStatus");
@@ -25,11 +25,11 @@ const centerForecast30 = document.getElementById("centerForecast30");
 
 const chkDemandSupply = document.getElementById("chkDemandSupply");
 const chkSupplyPrice = document.getElementById("chkSupplyPrice");
-const mainChartCanvas = document.getElementById("mainChart");
 
+const mainChartCanvas = document.getElementById("mainChart");
 let mainChartInstance = null;
 
-/* ========= 需給グラフ用疑似データ ========= */
+/* ========= 疑似乱数（ASINごと固定） ========= */
 function createPRNG(seedStr) {
   let seed = 0;
   for (let i = 0; i < seedStr.length; i++) seed += seedStr.charCodeAt(i);
@@ -39,6 +39,7 @@ function createPRNG(seedStr) {
   };
 }
 
+/* ========= 180日分のランキング・セラー数・価格を生成 ========= */
 function getDemandSupplySeries(asin) {
   const rand = createPRNG(asin);
   const days = 180;
@@ -46,6 +47,7 @@ function getDemandSupplySeries(asin) {
   const ranking = [];
   const sellers = [];
   const price = [];
+
   let rank = 60000 * (0.6 + rand() * 0.4);
   let seller = 5 + Math.round(rand() * 5);
   let p = 25 + rand() * 30;
@@ -54,83 +56,124 @@ function getDemandSupplySeries(asin) {
     labels.push(`${i}日前`);
     rank += (rand() - 0.5) * 4000;
     rank = Math.max(5000, Math.min(80000, rank));
+
     seller += (rand() - 0.5) * 2;
     seller = Math.max(1, Math.min(25, seller));
+
     p += (rand() - 0.5) * 2;
     p = Math.max(10, Math.min(80, p));
+
     ranking.push(Math.round(rank));
     sellers.push(Number(seller.toFixed(1)));
     price.push(Number(p.toFixed(2)));
   }
-  labels.reverse(); ranking.reverse(); sellers.reverse(); price.reverse();
-  return { labels, ranking, sellers, price };
+
+  return {
+    labels: labels.reverse(),
+    ranking: ranking.reverse(),
+    sellers: sellers.reverse(),
+    price: price.reverse()
+  };
 }
 
-/* ========= グラフ描画 ========= */
-function updateChartVisibility() {
-  if (!mainChartInstance) return;
-  const demandOn = chkDemandSupply.checked;
-  const supplyPriceOn = chkSupplyPrice.checked;
-
-  let showRank = true, showSeller = true, showPrice = true;
-
-  if (demandOn && !supplyPriceOn) {
-    showRank = true; showSeller = true; showPrice = false;
-  } else if (!demandOn && supplyPriceOn) {
-    showRank = false; showSeller = true; showPrice = true;
-  } else if (demandOn && supplyPriceOn) {
-    showRank = true; showSeller = true; showPrice = true;
-  } else {
-    showRank = true; showSeller = true; showPrice = true;
-  }
-
-  mainChartInstance.data.datasets[0].hidden = !showRank;
-  mainChartInstance.data.datasets[1].hidden = !showSeller;
-  mainChartInstance.data.datasets[2].hidden = !showPrice;
-  mainChartInstance.update();
-}
-
+/* ========= グラフ描画（太線＋文字小＋余白少なめ） ========= */
 function renderChart(asin) {
   const series = getDemandSupplySeries(asin);
 
   if (mainChartInstance) {
     mainChartInstance.destroy();
-    mainChartInstance = null;
   }
+
   const ctx = mainChartCanvas.getContext("2d");
   mainChartInstance = new Chart(ctx, {
     type: "line",
     data: {
       labels: series.labels,
       datasets: [
-        { label: "ランキング（小さいほど上位）", data: series.ranking, borderWidth: 2, pointRadius: 0, tension: 0.25, borderColor: "#60a5fa", yAxisID: "yRank" },
-        { label: "セラー数", data: series.sellers, borderWidth: 2, pointRadius: 0, tension: 0.25, borderColor: "#22c55e", yAxisID: "ySeller" },
-        { label: "価格（USD）", data: series.price, borderWidth: 2, pointRadius: 0, tension: 0.25, borderColor: "#f97316", yAxisID: "yPrice" }
+        {
+          label: "ランキング（小さいほど上位）",
+          data: series.ranking,
+          borderWidth: 3,
+          pointRadius: 0,
+          tension: 0.25,
+          borderColor: "#60a5fa",
+          yAxisID: "yRank"
+        },
+        {
+          label: "セラー数",
+          data: series.sellers,
+          borderWidth: 3,
+          pointRadius: 0,
+          tension: 0.25,
+          borderColor: "#22c55e",
+          yAxisID: "ySeller"
+        },
+        {
+          label: "価格（USD）",
+          data: series.price,
+          borderWidth: 3,
+          pointRadius: 0,
+          tension: 0.25,
+          borderColor: "#f97316",
+          yAxisID: "yPrice"
+        }
       ]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      spanGaps: true,
+      layout: {
+        padding: { left: 0, right: 4, top: 2, bottom: 4 }
+      },
       interaction: { mode: "index", intersect: false },
       plugins: {
-        legend: { position: "top" },
+        legend: {
+          position: "top",
+          labels: {
+            font: { size: 9 },
+            boxWidth: 20,
+            boxHeight: 9,
+            padding: 6
+          }
+        },
         tooltip: {
+          titleFont: { size: 10 },
+          bodyFont: { size: 10 },
           callbacks: {
             label: (ctx) => {
-              const label = ctx.dataset.label || "";
               if (ctx.dataset.yAxisID === "yPrice") {
-                return `${label}: $${ctx.parsed.y.toFixed(2)}`;
+                return `${ctx.dataset.label}: $${ctx.parsed.y.toFixed(2)}`;
               }
-              return `${label}: ${ctx.parsed.y}`;
+              return `${ctx.dataset.label}: ${ctx.parsed.y}`;
             }
           }
         }
       },
       scales: {
-        x: { display: true, ticks: { maxTicksLimit: 9 } },
-        yRank: { type: "linear", position: "left", reverse: true, title: { display: true, text: "ランキング" } },
-        ySeller: { type: "linear", position: "right", title: { display: true, text: "セラー数" }, grid: { drawOnChartArea: false } },
-        yPrice: { type: "linear", position: "right", offset: true, title: { display: true, text: "価格(USD)" }, grid: { drawOnChartArea: false } }
+        x: {
+          ticks: { font: { size: 9 }, maxTicksLimit: 9 },
+          grid: { display: false }
+        },
+        yRank: {
+          reverse: true,
+          title: { display: true, text: "ランキング", font: { size: 9 } },
+          ticks: { font: { size: 9 } },
+          grid: { drawBorder: false }
+        },
+        ySeller: {
+          position: "right",
+          title: { display: true, text: "セラー数", font: { size: 9 } },
+          ticks: { font: { size: 9 } },
+          grid: { drawOnChartArea: false, drawBorder: false }
+        },
+        yPrice: {
+          position: "right",
+          offset: true,
+          title: { display: true, text: "価格(USD)", font: { size: 9 } },
+          ticks: { font: { size: 9 } },
+          grid: { drawOnChartArea: false, drawBorder: false }
+        }
       }
     }
   });
@@ -140,10 +183,26 @@ function renderChart(asin) {
   updateChartVisibility();
 }
 
+/* チェックボックスによる線のON/OFF */
+function updateChartVisibility() {
+  if (!mainChartInstance) return;
+  const demandOn = chkDemandSupply.checked;
+  const supplyOn = chkSupplyPrice.checked;
+
+  const showRank = demandOn || (!demandOn && !supplyOn);
+  const showSeller = demandOn || supplyOn;
+  const showPrice = supplyOn;
+
+  mainChartInstance.data.datasets[0].hidden = !showRank;
+  mainChartInstance.data.datasets[1].hidden = !showSeller;
+  mainChartInstance.data.datasets[2].hidden = !showPrice;
+  mainChartInstance.update();
+}
+
 chkDemandSupply.addEventListener("change", updateChartVisibility);
 chkSupplyPrice.addEventListener("change", updateChartVisibility);
 
-/* ========= 注意事項タグ ========= */
+/* ========= 注意事項タグ描画 ========= */
 function renderWarningTags(container, rawText) {
   container.innerHTML = "";
   const text = (rawText || "").trim();
@@ -160,10 +219,10 @@ function renderWarningTags(container, rawText) {
   };
 
   pushIfIncluded("輸出不可", "warning-export-ban");
-  pushIfIncluded("知財",     "warning-ip");
-  pushIfIncluded("大型",     "warning-large");
-  pushIfIncluded("出荷禁止","warning-ship-ban");
-  pushIfIncluded("承認要",   "warning-approval");
+  pushIfIncluded("知財", "warning-ip");
+  pushIfIncluded("大型", "warning-large");
+  pushIfIncluded("出荷禁止", "warning-ship-ban");
+  pushIfIncluded("承認要", "warning-approval");
   pushIfIncluded("バリエーション", "warning-variation");
 
   const wrap = document.createElement("div");
@@ -185,47 +244,47 @@ function renderWarningTags(container, rawText) {
   container.appendChild(wrap);
 }
 
-/* ========= その他の指標テーブル ========= */
+/* ========= その他の指標テーブル関連 ========= */
 const detailHeaderRow = document.getElementById("detailHeaderRow");
 const detailBodyRow   = document.getElementById("detailBodyRow");
 const detailHiddenBar = document.getElementById("detailHiddenBar");
 
 const DETAIL_COLUMNS_DEF = [
-  { id: "アメリカASIN", label: "アメリカASIN", sub:"US Listing", visible:true },
-  { id: "日本ASIN",     label: "日本ASIN",     sub:"JP Listing", visible:true },
-  { id: "JAN",          label: "JAN",          sub:"バーコード", visible:true },
-  { id: "SKU",          label: "SKU",          sub:"管理用コード", visible:true },
-  { id: "個数",         label: "個数",         sub:"1注文あたり", visible:true },
-  { id: "30日販売数",   label: "30日販売数",   sub:"実績", visible:true },
-  { id: "90日販売数",   label: "90日販売数",   sub:"実績", visible:false },
-  { id: "180日販売数",  label: "180日販売数",  sub:"実績", visible:false },
-  { id: "複数在庫指数45日分", label: "複数在庫指数", sub:"45日分", visible:false },
-  { id: "複数在庫指数60日分", label: "複数在庫指数", sub:"60日分", visible:false },
-  { id: "ライバル偏差1", label: "ライバル偏差", sub:"×1", visible:false },
-  { id: "ライバル偏差2", label: "ライバル偏差", sub:"×2", visible:false },
-  { id: "ライバル増加率", label: "ライバル増加率", sub:"", visible:false },
-  { id: "在庫数",       label: "在庫数",       sub:"FBA + FBM", visible:true },
-  { id: "返品率",       label: "返品率",       sub:"過去実績", visible:true },
-  { id: "販売額（ドル）", label:"販売額", sub:"カート価格 (USD)", visible:true },
-  { id: "入金額（円）",  label:"入金額", sub:"1個あたり (円)",  visible:true },
-  { id: "入金額計（円）", label:"入金額 計", sub:"数量×入金額", visible:false },
-  { id: "粗利益率予測", label:"粗利益率予測", sub:"1個あたり", visible:true },
-  { id: "粗利益予測",   label:"粗利益予測",   sub:"1個あたり (円)", visible:true },
-  { id: "粗利益",       label:"粗利益 実績",   sub:"参考値", visible:false },
-  { id: "仕入れ目安単価", label:"仕入れ目安単価", sub:"1個", visible:true },
-  { id: "仕入合計",     label:"仕入合計",     sub:"1注文", visible:false },
-  { id: "仕入計",       label:"仕入 計",       sub:"その他含む", visible:false },
-  { id: "重量kg",       label:"重量",         sub:"実重量 (kg)", visible:true },
-  { id: "サイズ",       label:"サイズ",       sub:"縦×横×高さ", visible:true },
-  { id: "サイズ感",     label:"サイズ感",     sub:"S / M / L", visible:false },
-  { id: "容積重量",     label:"容積重量",     sub:"kg換算", visible:false },
-  { id: "材質",         label:"材質",         sub:"主素材", visible:true },
-  { id: "大型",         label:"大型判定",     sub:"FBA基準", visible:true },
-  { id: "請求重量",     label:"請求重量",     sub:"課金用", visible:false },
-  { id: "想定送料",     label:"想定送料",     sub:"弊社想定", visible:true },
-  { id: "送料",         label:"送料",         sub:"実費", visible:false },
-  { id: "関税",         label:"関税",         sub:"推定", visible:true },
-  { id: "Keepaリンク",  label:"Keepa グラフ", sub:"US Amazon", visible:true }
+  { id: "アメリカASIN",       label: "アメリカASIN",   sub:"US Listing",       visible:true  },
+  { id: "日本ASIN",           label: "日本ASIN",       sub:"JP Listing",       visible:true  },
+  { id: "JAN",                label: "JAN",            sub:"バーコード",       visible:true  },
+  { id: "SKU",                label: "SKU",            sub:"管理用コード",     visible:true  },
+  { id: "個数",               label: "個数",           sub:"1注文あたり",     visible:true  },
+  { id: "30日販売数",         label: "30日販売数",     sub:"実績",             visible:true  },
+  { id: "90日販売数",         label: "90日販売数",     sub:"実績",             visible:false },
+  { id: "180日販売数",        label: "180日販売数",    sub:"実績",             visible:false },
+  { id: "複数在庫指数45日分", label: "複数在庫指数",   sub:"45日分",           visible:false },
+  { id: "複数在庫指数60日分", label: "複数在庫指数",   sub:"60日分",           visible:false },
+  { id: "ライバル偏差1",      label: "ライバル偏差",   sub:"×1",               visible:false },
+  { id: "ライバル偏差2",      label: "ライバル偏差",   sub:"×2",               visible:false },
+  { id: "ライバル増加率",     label: "ライバル増加率", sub:"",                 visible:false },
+  { id: "在庫数",             label: "在庫数",         sub:"FBA + FBM",        visible:true  },
+  { id: "返品率",             label: "返品率",         sub:"過去実績",         visible:true  },
+  { id: "販売額（ドル）",     label: "販売額",         sub:"カート価格 (USD)", visible:true  },
+  { id: "入金額（円）",       label: "入金額",         sub:"1個あたり (円)",  visible:true  },
+  { id: "入金額計（円）",     label: "入金額 計",      sub:"数量×入金額",      visible:false },
+  { id: "粗利益率予測",       label: "粗利益率予測",   sub:"1個あたり",       visible:true  },
+  { id: "粗利益予測",         label: "粗利益予測",     sub:"1個あたり (円)",  visible:true  },
+  { id: "粗利益",             label: "粗利益 実績",    sub:"参考値",           visible:false },
+  { id: "仕入れ目安単価",     label: "仕入れ目安単価", sub:"1個",              visible:true  },
+  { id: "仕入合計",           label: "仕入合計",       sub:"1注文",            visible:false },
+  { id: "仕入計",             label: "仕入 計",        sub:"その他含む",       visible:false },
+  { id: "重量kg",             label: "重量",           sub:"実重量 (kg)",      visible:true  },
+  { id: "サイズ",             label: "サイズ",         sub:"縦×横×高さ",       visible:true  },
+  { id: "サイズ感",           label: "サイズ感",       sub:"S / M / L",        visible:false },
+  { id: "容積重量",           label: "容積重量",       sub:"kg換算",           visible:false },
+  { id: "材質",               label: "材質",           sub:"主素材",           visible:true  },
+  { id: "大型",               label: "大型判定",       sub:"FBA基準",         visible:true  },
+  { id: "請求重量",           label: "請求重量",       sub:"課金用",           visible:false },
+  { id: "想定送料",           label: "想定送料",       sub:"弊社想定",         visible:true  },
+  { id: "送料",               label: "送料",           sub:"実費",             visible:false },
+  { id: "関税",               label: "関税",           sub:"推定",             visible:true  },
+  { id: "Keepaリンク",        label: "Keepa グラフ",   sub:"US Amazon",        visible:true  }
 ];
 
 let detailColumns = DETAIL_COLUMNS_DEF.map(c => ({...c}));
@@ -272,6 +331,7 @@ function buildDetailHeader() {
     th.appendChild(inner);
     detailHeaderRow.appendChild(th);
 
+    /* ドラッグで列入れ替え */
     th.addEventListener("dragstart", e => {
       detailDragId = col.id;
       e.dataTransfer.effectAllowed = "move";
@@ -387,6 +447,7 @@ function clearViewWithMessage(msg) {
   }
 }
 
+/* ========= ASINロード ========= */
 function loadAsin() {
   const asin = asinInput.value.trim().toUpperCase();
   if (!asin) {
@@ -409,16 +470,18 @@ asinInput.addEventListener("keydown", (e) => {
   }
 });
 
-/* ========= ASIN一覧表示 ========= */
+/* ========= ASINカタログ表示 ========= */
 function initCatalog() {
   const asins = Object.keys(ASIN_DATA || {});
   headerStatus.textContent = `登録ASIN数：${asins.length}件`;
   asinCatalog.innerHTML = "";
   if (!asins.length) return;
+
   const label = document.createElement("span");
   label.className = "asin-catalog-label";
   label.textContent = "データがあるASIN：";
   asinCatalog.appendChild(label);
+
   asins.forEach(a => {
     const pill = document.createElement("span");
     pill.className = "pill";
