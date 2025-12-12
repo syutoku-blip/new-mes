@@ -4,22 +4,23 @@
   <meta charset="UTF-8" />
   <title>MES-AI-A 詳細ビュー</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-
   <link rel="stylesheet" href="styles.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <div class="app-shell">
+    <!-- ヘッダー -->
     <header>
       <div>
         <h1>MES-AI-A ASIN 詳細ビュー（2ページ目）</h1>
         <div class="subtitle">
-          上段で「1商品の概要」を、下段で「在庫・価格・需要などの詳細指標」を横スクロールで確認できます。
+          上段で「1商品の概要」を、下段で「在庫・価格・需給などの詳細指標」を横スクロールで確認できます。
         </div>
       </div>
       <div id="headerStatus" class="status"></div>
     </header>
 
+    <!-- ASIN入力 -->
     <div class="toolbar">
       <label for="asinInput">ASIN：</label>
       <input id="asinInput" type="text" placeholder="例）B0A0000001" />
@@ -31,9 +32,9 @@
 
     <div class="page-body">
       <div class="content">
-        <!-- 上段：1枠に収めた概要ブロック -->
+        <!-- 上段：3カラムカード -->
         <div id="summaryCard" class="summary-card" style="display:none;">
-          <!-- 左：画像＋基本情報 -->
+          <!-- 左：商品情報 -->
           <div class="summary-column">
             <div class="summary-left-inner">
               <div class="summary-image-box">
@@ -56,6 +57,7 @@
                   <div class="summary-basic-label">ブランド</div>
                   <div id="basicBrand" class="summary-basic-value"></div>
                 </div>
+
                 <div class="summary-basic-row">
                   <div class="summary-basic-label">評価</div>
                   <div id="basicRating" class="summary-basic-value"></div>
@@ -68,7 +70,18 @@
 
                 <div class="summary-basic-row">
                   <div class="summary-basic-label">各種ASIN</div>
+                  <!-- 日本 / US の ASIN をまとめて表示 -->
                   <div id="basicAsinGroup" class="summary-basic-value"></div>
+                </div>
+
+                <div class="summary-basic-row">
+                  <div class="summary-basic-label">JAN</div>
+                  <div id="basicJAN" class="summary-basic-value"></div>
+                </div>
+
+                <div class="summary-basic-row">
+                  <div class="summary-basic-label">SKU</div>
+                  <div id="basicSKU" class="summary-basic-value"></div>
                 </div>
 
                 <div class="summary-basic-row">
@@ -107,6 +120,7 @@
           <div class="summary-column">
             <div class="summary-center">
               <div class="center-title">利益・販売予測</div>
+
               <div class="center-row">
                 <div class="center-row-label">FBA最安値</div>
                 <div id="centerFBA" class="center-row-value"></div>
@@ -127,6 +141,7 @@
                 <div class="center-row-label">予測30日販売数</div>
                 <div id="centerForecast30" class="center-row-value"></div>
               </div>
+
               <div style="margin-top:auto;font-size:10px;color:#92400e;">
                 ※ 利益・販売数はダミーデータです（実運用時はスプレッドシート/APIと連携）
               </div>
@@ -182,6 +197,7 @@
               <small>ヘッダーをドラッグで列を並び替え、「−」で列を非表示にできます。</small>
             </div>
             <div id="detailHiddenBar" class="detail-hidden-bar"></div>
+
             <div class="detail-table-scroll">
               <table id="detailTable" class="detail-table">
                 <thead>
@@ -192,6 +208,7 @@
                 </tbody>
               </table>
             </div>
+
             <div class="detail-table-footer">
               <span>横スクロールで全項目を確認できます。</span>
               <span>非表示にした列は、上の「非表示列バー」から「＋」で再表示できます。</span>
@@ -207,4 +224,3 @@
   <script src="main.js"></script>
 </body>
 </html>
-
