@@ -28,7 +28,7 @@ body {
   flex-direction: column;
 }
 
-/* ========== ヘッダーまわり ========== */
+/* ========== ヘッダー ========== */
 header {
   padding: 14px 24px 12px;
   background: linear-gradient(90deg, #4b6bff, #8a63ff);
@@ -61,7 +61,7 @@ header .subtitle {
   white-space: nowrap;
 }
 
-/* ========== 上部ツールバー ========== */
+/* ========== ツールバー ========== */
 .toolbar {
   padding: 10px 24px 6px;
   display: flex;
@@ -105,7 +105,7 @@ header .subtitle {
   background:#eef2ff;
 }
 
-/* ========== 登録ASINピル ========== */
+/* ========== ASINピル ========== */
 .asin-catalog {
   padding: 4px 24px 10px;
   display: flex;
@@ -131,7 +131,7 @@ header .subtitle {
   border: 1px solid #c7d2fe;
 }
 
-/* ========== ページレイアウト ========== */
+/* ========== レイアウト ========== */
 .page-body {
   flex: 1;
   padding: 14px 20px 24px;
@@ -146,7 +146,7 @@ header .subtitle {
   gap: 14px;
 }
 
-/* ========== 上段：まとめカード ========== */
+/* ========== 上段まとめカード ========== */
 .summary-card {
   background: var(--bg-card);
   border-radius: var(--radius-lg);
@@ -216,7 +216,7 @@ header .subtitle {
   gap: 4px;
 }
 .summary-basic-label {
-  min-width: 62px;
+  min-width: 72px;
   color: var(--text-muted);
   font-weight: 500;
 }
@@ -239,20 +239,18 @@ header .subtitle {
   font-weight: 600;
   letter-spacing: .02em;
 }
-.warning-export-ban      { background:#ef4444; } /* 輸出不可 */
-.warning-ip              { background:#8b5cf6; } /* 知財 */
-.warning-large           { background:#f97316; } /* 大型 */
-.warning-ship-ban        { background:#6b7280; } /* 出荷禁止 */
-.warning-approval        { background:#0ea5e9; } /* 承認要 */
-.warning-variation       { background:#22c55e; } /* バリエーション */
+.warning-export-ban      { background:#ef4444; }
+.warning-ip              { background:#8b5cf6; }
+.warning-large           { background:#f97316; }
+.warning-ship-ban        { background:#6b7280; }
+.warning-approval        { background:#0ea5e9; }
+.warning-variation       { background:#22c55e; }
 .warning-plain           { background:#f97316; }
 
-/* 中央：利益・販売予測 */
+/* 中央：利益・販売予測（背景色なしで左と揃える） */
 .summary-center {
-  background: #fefce8;
   border-radius: var(--radius-md);
-  border: 1px solid #facc15;
-  padding: 8px 10px;
+  padding: 4px 2px;
   display:flex;
   flex-direction:column;
   height:100%;
@@ -280,12 +278,10 @@ header .subtitle {
   font-weight: 650;
 }
 
-/* 右：グラフブロック */
+/* 右：グラフ（背景色なしで左と揃える） */
 .summary-right {
-  background: #eff6ff;
   border-radius: var(--radius-md);
-  padding: 8px 9px 8px;
-  border: 1px solid #bfdbfe;
+  padding: 4px 2px;
   display: flex;
   flex-direction: column;
   height:100%;
@@ -321,7 +317,7 @@ header .subtitle {
   gap: 2px;
 }
 
-/* ★ グラフを枠いっぱいに表示する調整 */
+/* グラフ枠 */
 .graph-canvas-wrap {
   flex: 1;
   min-height: 155px;
