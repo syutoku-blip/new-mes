@@ -126,7 +126,6 @@
                   <div id="basicSize" class="basic-value"></div>
                 </div>
 
-                <!-- ★ここを変更：重量（容積重量） -->
                 <div class="basic-row">
                   <div class="basic-label">重量（容積重量）</div>
                   <div id="basicWeight" class="basic-value"></div>
@@ -175,14 +174,8 @@
               </div>
 
               <div class="graph-options" id="graphOptions">
-                <label>
-                  <input type="checkbox" id="chkDemandSupply" checked />
-                  《需要＆供給》
-                </label>
-                <label>
-                  <input type="checkbox" id="chkSupplyPrice" />
-                  《供給＆価格》
-                </label>
+                <label><input type="checkbox" id="chkDemandSupply" checked />《需要＆供給》</label>
+                <label><input type="checkbox" id="chkSupplyPrice" />《供給＆価格》</label>
               </div>
 
               <div class="graph-body">
@@ -196,7 +189,7 @@
                 </div>
 
                 <div class="graph-caption">
-                  表示切替で MES-AI-A / Keepa を切り替えできます（MES側はチェックボックスで線を切替）
+                  表示切替で MES-AI-A / Keepa を切り替えできます（MES側はチェックで線を切替）
                 </div>
               </div>
             </div>
@@ -220,8 +213,6 @@
               <small>指標プールで「下段テーブル」に入れた項目が列になります。</small>
             </div>
 
-            <div id="detailHiddenBar" class="detail-hidden-bar"></div>
-
             <div class="detail-table-scroll">
               <table class="detail-table" id="detailTable">
                 <thead><tr id="detailHeaderRow"></tr></thead>
@@ -231,7 +222,7 @@
 
             <div class="detail-table-footer">
               <span>横スクロールで全項目を確認できます。</span>
-              <span>列の「−」で非表示、上のバーから「＋」で復帰できます。</span>
+              <span>列の並び替えはヘッダーをドラッグしてください。</span>
             </div>
           </div>
         </section>
