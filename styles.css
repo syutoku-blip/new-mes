@@ -103,6 +103,101 @@ header .subtitle {
   box-shadow: 0 4px 14px rgba(15,23,42,0.16);
   background:#eef2ff;
 }
+.toolbar .ghost-btn {
+  background: transparent;
+  color: #1f2937;
+  border: 1px solid rgba(148,163,184,.7);
+  box-shadow: none;
+}
+.toolbar .ghost-btn:hover {
+  background:#e5e7ff;
+}
+
+/* ===== 指標カスタマイズパネル ===== */
+.metrics-config {
+  margin: 4px 24px 0;
+  background: #f9fafb;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 6px 18px rgba(15,23,42,.12);
+  padding: 8px 10px 10px;
+}
+.metrics-config-header {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  font-size:12px;
+  font-weight:650;
+  margin-bottom:6px;
+}
+.metrics-config-header button {
+  border:none;
+  background:transparent;
+  cursor:pointer;
+  font-size:16px;
+  padding:0 4px;
+  color:#6b7280;
+}
+.metrics-config-header button:hover {
+  color:#111827;
+}
+.metrics-config-body {
+  display:flex;
+  gap:8px;
+}
+.metrics-zone {
+  flex:1;
+  background:#ffffff;
+  border-radius:10px;
+  border:1px dashed #cbd5f5;
+  padding:6px 6px 4px;
+  min-height:80px;
+}
+.metrics-zone-title {
+  font-size:11px;
+  font-weight:650;
+  margin-bottom:4px;
+  color:#4b5563;
+}
+.metrics-zone-list {
+  min-height:56px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:4px;
+}
+.metrics-zone.metrics-zone-over {
+  background:#eef2ff;
+}
+.metric-pill {
+  font-size:10px;
+  padding:3px 8px;
+  border-radius:999px;
+  background:#e0e7ff;
+  border:1px solid #c7d2fe;
+  color:#3730a3;
+  cursor:grab;
+  user-select:none;
+}
+.metric-pill:active {
+  cursor:grabbing;
+}
+.metrics-config-footer {
+  margin-top:6px;
+  font-size:11px;
+  color:var(--text-muted);
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+.metrics-config-footer button {
+  border-radius:999px;
+  border:none;
+  padding:4px 12px;
+  font-size:11px;
+  background:#eff6ff;
+  color:#1d4ed8;
+  cursor:pointer;
+}
 
 /* ===== ASINピル ===== */
 .asin-catalog {
@@ -245,7 +340,7 @@ header .subtitle {
 .warning-variation       { background:#22c55e; }
 .warning-plain           { background:#f97316; }
 
-/* 中央：利益・販売予測 */
+/* 中央：主要指標 */
 .summary-center {
   border-radius: var(--radius-md);
   padding: 4px 2px;
@@ -259,11 +354,15 @@ header .subtitle {
   margin-bottom: 4px;
   color:#854d0e;
 }
+#centerMetricsContainer {
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+}
 .center-row {
   display: flex;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 3px;
   font-size: 11px;
 }
 .center-row-label {
