@@ -46,7 +46,12 @@ body{
   background: linear-gradient(180deg,#eef2ff,#e5e7ff);
   border-bottom:1px solid rgba(148,163,184,.4);
 }
-.toolbar label{ font-size:12px; font-weight:700; color:var(--muted); }
+.toolbar label{
+  font-size:12px;
+  font-weight:700;
+  color:var(--muted);
+  white-space:nowrap;              /* ★改行防止 */
+}
 .toolbar input{
   padding:7px 14px;
   border-radius:999px;
@@ -165,7 +170,7 @@ body{
   box-shadow:var(--shadow);
   padding:12px 14px;
   display:grid;
-  grid-template-columns: minmax(300px,1.1fr) minmax(220px,.7fr) minmax(360px,1.2fr);
+  grid-template-columns: minmax(300px,1.1fr) minmax(220px,.65fr) minmax(360px,1.25fr); /* ★中央を少し狭く */
   gap:12px;
 }
 .summary-column{
@@ -198,6 +203,7 @@ body{
   border:1px solid #e5e7eb;
   border-radius:10px;
 }
+
 .qty-row,.price-row{
   width:100%;
   display:flex;
@@ -205,6 +211,10 @@ body{
   align-items:center;
   font-size:11px;
   gap:6px;
+}
+.qty-row span,
+.price-row span{
+  white-space:nowrap;           /* ★「販売価格 ($)」が2段になるのを防止 */
 }
 .qty-row select{ font-size:11px; padding:2px 8px; }
 .price-row input{
@@ -238,9 +248,26 @@ body{
   margin-bottom:6px;
   word-break: break-word;
 }
-.basic-row{ display:flex; gap:8px; margin:2px 0; }
-.basic-label{ min-width:92px; color:var(--muted); font-weight:800; }
-.basic-value{ font-weight:900; word-break: break-word; }
+
+/* ★ラベル先頭・値先頭を揃える（重量などのズレ防止） */
+.basic-row{
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  margin:3px 0;
+}
+.basic-label{
+  flex:0 0 112px;              /* ★固定幅で先頭を揃える */
+  width:112px;
+  color:var(--muted);
+  font-weight:800;
+  white-space:nowrap;          /* ★ラベルの2段化を防止 */
+}
+.basic-value{
+  flex:1 1 auto;
+  font-weight:900;
+  word-break: break-word;
+}
 
 /* 注意事項：横並び */
 .warning-inline .basic-value{ display:flex; flex-wrap:wrap; gap:6px; }
@@ -270,13 +297,18 @@ body{
   font-size:11px;
   padding:3px 0;
 }
-.center-row-label{ color:var(--muted); font-weight:800; }
-.center-row-value{ font-weight:900; }
+.center-row-label{ color:var(--muted); font-weight:800; white-space:nowrap; }
+.center-row-value{ font-weight:900; white-space:nowrap; }
 .center-note{ margin-top:8px; font-size:10px; color:#92400e; }
 
 /* Right Graph */
 .summary-right{ height:100%; display:flex; flex-direction:column; }
-.graph-header{ display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+.graph-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:4px;
+}
 .graph-header-title{ font-size:12px; font-weight:900; color:#1d4ed8; }
 .graph-switch{ display:flex; gap:6px; }
 .graph-switch-btn{
@@ -289,13 +321,23 @@ body{
   cursor:pointer;
 }
 .graph-switch-btn.active{ background:#4b6bff; color:#fff; }
+
+/* ★チェックボックスを横並び＆高さ圧縮 */
 .graph-options{
   display:flex;
-  flex-direction:column;
-  align-items:flex-end;
-  gap:4px;
+  flex-direction:row;         /* ★横並び */
+  justify-content:flex-end;
+  align-items:center;
+  gap:14px;
   font-size:11px;
-  margin-bottom:6px;
+  margin:2px 0 6px;
+  line-height:1;
+}
+.graph-options label{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  white-space:nowrap;
 }
 .graph-body{ flex:1; display:flex; flex-direction:column; gap:6px; }
 .graph-canvas-wrap{
@@ -336,7 +378,7 @@ body{
 .card-sub{ font-size:11px; color:var(--muted); font-weight:700; }
 .card-body{ padding:10px 4px 2px; color:var(--muted); font-size:12px; }
 
-/* Bottom Table */
+/* Bottom Table（★列セルUIを削除：非表示バーもトグルもなし） */
 .detail-table-container{
   background:var(--card);
   border-radius:var(--r-lg);
@@ -356,34 +398,6 @@ body{
   font-weight:900;
 }
 .detail-table-header-bar small{ font-size:11px; color:var(--muted); font-weight:800; }
-
-.detail-hidden-bar{
-  padding:6px 12px 4px;
-  display:none;
-  flex-wrap:wrap;
-  gap:6px;
-  font-size:11px;
-  color:var(--muted);
-  border-bottom:1px solid var(--border);
-  background:#f9fafb;
-}
-.detail-hidden-pill{
-  display:inline-flex;
-  align-items:center;
-  gap:6px;
-  padding:4px 10px;
-  border-radius:999px;
-  border:1px dashed #c7d2fe;
-  background:#eef2ff;
-}
-.detail-hidden-pill button{
-  border:none;
-  background:transparent;
-  font-size:12px;
-  color:#4f46e5;
-  cursor:pointer;
-  padding:0;
-}
 
 .detail-table-scroll{ overflow-x:auto; background: linear-gradient(180deg,#fff,#f9fafb); }
 .detail-table{
@@ -409,20 +423,6 @@ body{
   cursor:grab;
   user-select:none;
 }
-.th-inner{ display:flex; align-items:center; justify-content:center; gap:8px; }
-.th-label{ font-size:12px; }
-.th-toggle{
-  border:1px solid #9ca3af;
-  background:#fff;
-  color:#111827;
-  font-size:12px;
-  font-weight:900;
-  width:26px;
-  height:24px;
-  border-radius:6px;
-  cursor:pointer;
-}
-.th-toggle:hover{ border-color:#ef4444; color:#ef4444; }
 .drag-over{ outline:2px dashed #c7d2fe; background:#e5e7ff; }
 
 .detail-table tbody tr:nth-child(even){ background:#f9fafb; }
