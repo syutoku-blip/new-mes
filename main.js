@@ -45,7 +45,7 @@ let mainChartInstance = null;
 
 const detailHeaderRow = document.getElementById("detailHeaderRow");
 const detailBodyRow = document.getElementById("detailBodyRow");
-const detailHiddenBar = document.getElementById("detailHiddenBar");
+let lastDetailData = null;
 
 /* Metrics pool zones */
 const metricsPoolZone = document.getElementById("metricsPoolZone");
@@ -53,8 +53,6 @@ const metricsCenterZone = document.getElementById("metricsCenterZone");
 const metricsTableZone = document.getElementById("metricsTableZone");
 const metricsHiddenZone = document.getElementById("metricsHiddenZone");
 const metricsResetBtn = document.getElementById("metricsResetBtn");
-
-let lastDetailData = null;
 
 /* =========================
    Warning tags
@@ -158,33 +156,9 @@ function renderChart(asin) {
     data: {
       labels: series.labels,
       datasets: [
-        {
-          label: "ランキング（小さいほど上位）",
-          data: series.ranking,
-          borderWidth: 3,
-          pointRadius: 0,
-          tension: 0.25,
-          borderColor: "#60a5fa",
-          yAxisID: "yRank"
-        },
-        {
-          label: "セラー数",
-          data: series.sellers,
-          borderWidth: 3,
-          pointRadius: 0,
-          tension: 0.25,
-          borderColor: "#22c55e",
-          yAxisID: "ySeller"
-        },
-        {
-          label: "価格（USD）",
-          data: series.price,
-          borderWidth: 3,
-          pointRadius: 0,
-          tension: 0.25,
-          borderColor: "#f97316",
-          yAxisID: "yPrice"
-        }
+        { label: "ランキング（小さいほど上位）", data: series.ranking, borderWidth: 3, pointRadius: 0, tension: 0.25, borderColor: "#60a5fa", yAxisID: "yRank" },
+        { label: "セラー数", data: series.sellers, borderWidth: 3, pointRadius: 0, tension: 0.25, borderColor: "#22c55e", yAxisID: "ySeller" },
+        { label: "価格（USD）", data: series.price, borderWidth: 3, pointRadius: 0, tension: 0.25, borderColor: "#f97316", yAxisID: "yPrice" }
       ]
     },
     options: {
@@ -192,18 +166,14 @@ function renderChart(asin) {
       maintainAspectRatio: false,
       interaction: { mode: "index", intersect: false },
       plugins: {
-        legend: {
-          position: "top",
-          labels: { font: { size: 9 }, boxWidth: 18, boxHeight: 8, padding: 6 }
-        },
+        legend: { position: "top", labels: { font: { size: 9 }, boxWidth: 18, boxHeight: 8, padding: 6 } },
         tooltip: {
           titleFont: { size: 10 },
           bodyFont: { size: 10 },
           callbacks: {
-            label: (ctx) => {
-              if (ctx.dataset.yAxisID === "yPrice") return `${ctx.dataset.label}: $${ctx.parsed.y.toFixed(2)}`;
-              return `${ctx.dataset.label}: ${ctx.parsed.y}`;
-            }
+            label: (ctx) => ctx.dataset.yAxisID === "yPrice"
+              ? `${ctx.dataset.label}: $${ctx.parsed.y.toFixed(2)}`
+              : `${ctx.dataset.label}: ${ctx.parsed.y}`
           }
         }
       },
@@ -240,9 +210,7 @@ function updateChartVisibility() {
 chkDemandSupply.addEventListener("change", updateChartVisibility);
 chkSupplyPrice.addEventListener("change", updateChartVisibility);
 
-/* =========================
-   Graph switch (MES / Keepa)
-========================= */
+/* Graph switch */
 function setGraphMode(mode) {
   if (mode === "MES") {
     btnMesGraph.classList.add("active");
@@ -266,9 +234,7 @@ btnKeepaGraph.addEventListener("click", () => {
   if (asin) keepaIframe.src = `https://keepa.com/#!product/1-${asin}`;
 });
 
-/* =========================
-   Cart
-========================= */
+/* Cart */
 addToCartBtn.addEventListener("click", () => {
   const asin = (basicASIN.textContent || "").trim();
   const qty = Number(qtySelect.value || 1);
@@ -284,11 +250,10 @@ addToCartBtn.addEventListener("click", () => {
 
 /* =========================
    Metrics pool (DnD)
-   ★Keepa削除 / サイズ感削除
 ========================= */
 const METRICS_STORAGE_KEY = "MES_AI_METRICS_ZONES_V4";
 
-/* 左枠にある項目はプールに出さない（=ここに含めない） */
+/* 左枠にある項目はここに入れない（ブランド/評価/ASIN/各種ASIN/JAN/SKU/サイズ/重量/材質/カテゴリ/注意事項） */
 const METRICS_ALL = [
   { id: "FBA最安値", label: "FBA最安値", sourceKey: "FBA最安値" },
   { id: "過去3月FBA最安値", label: "過去3ヶ月FBA最安値", sourceKey: "過去3月FBA最安値" },
@@ -318,23 +283,14 @@ const METRICS_ALL = [
 
   { id: "大型", label: "大型判定", sourceKey: "大型" },
   { id: "請求重量", label: "請求重量", sourceKey: "請求重量" },
-  /* 容積重量は左枠に表示するので「指標としては残すか？」→今回は残しておく（必要なら後で外せる） */
   { id: "容積重量", label: "容積重量", sourceKey: "容積重量" },
-
   { id: "想定送料", label: "想定送料", sourceKey: "想定送料" },
   { id: "送料", label: "送料", sourceKey: "送料" },
   { id: "関税", label: "関税", sourceKey: "関税" }
-
-  /* ★Keepaリンク削除 */
-  /* ★サイズ感削除 */
 ];
 
 const DEFAULT_ZONES = {
-  pool: [
-    "90日販売数","180日販売数","複数在庫指数45日分","複数在庫指数60日分",
-    "ライバル偏差1","ライバル偏差2","ライバル増加率",
-    "入金額計（円）","仕入合計","仕入計","容積重量","請求重量","送料"
-  ],
+  pool: ["90日販売数","180日販売数","複数在庫指数45日分","複数在庫指数60日分","ライバル偏差1","ライバル偏差2","ライバル増加率","入金額計（円）","仕入合計","仕入計","容積重量","請求重量","送料"],
   center: ["FBA最安値","過去3月FBA最安値","粗利益率予測","粗利益予測","予測30日販売数"],
   table: ["30日販売数","在庫数","返品率","販売額（ドル）","入金額（円）","仕入れ目安単価","想定送料","関税","大型"],
   hidden: []
@@ -471,9 +427,7 @@ metricsResetBtn.addEventListener("click", () => {
   applyMetricsLayout(lastDetailData);
 });
 
-/* =========================
-   Center metrics render
-========================= */
+/* Center metrics */
 function renderCenterMetrics(data){
   centerMetricsContainer.innerHTML = "";
   const ids = ZONES.center;
@@ -509,56 +463,25 @@ function renderCenterMetrics(data){
 }
 
 /* =========================
-   Table build
+   Table build（★列セルUIなし：非表示機能も撤廃）
 ========================= */
 let detailColumns = [];
 let detailDragId = null;
 
 function buildDetailColumnsFromZones(){
   const tableIds = ZONES.table;
-  const cols = [];
-
-  tableIds.forEach(metricId => {
-    const m = metricById(metricId);
-    if(!m) return;
-    cols.push({ id: m.sourceKey, label: m.label, sub:"", visible:true });
-  });
-
-  const prev = new Map(detailColumns.map(c => [c.id, c.visible]));
-  cols.forEach(c => { if(prev.has(c.id)) c.visible = prev.get(c.id); });
-
-  detailColumns = cols;
+  detailColumns = tableIds
+    .map(metricId => metricById(metricId))
+    .filter(Boolean)
+    .map(m => ({ id: m.sourceKey, label: m.label }));
 }
-
-function visibleCols(){ return detailColumns.filter(c => c.visible !== false); }
 
 function buildDetailHeader(){
   detailHeaderRow.innerHTML = "";
-
-  visibleCols().forEach(col => {
+  detailColumns.forEach(col => {
     const th = document.createElement("th");
     th.draggable = true;
-
-    const inner = document.createElement("div");
-    inner.className = "th-inner";
-
-    const label = document.createElement("span");
-    label.className = "th-label";
-    label.textContent = col.label;
-    inner.appendChild(label);
-
-    const toggle = document.createElement("button");
-    toggle.className = "th-toggle";
-    toggle.textContent = "−";
-    toggle.title = "この列を非表示";
-    toggle.addEventListener("click", (e) => {
-      e.stopPropagation();
-      col.visible = false;
-      rebuildDetailTable(lastDetailData);
-    });
-    inner.appendChild(toggle);
-
-    th.appendChild(inner);
+    th.textContent = col.label;
     detailHeaderRow.appendChild(th);
 
     th.addEventListener("dragstart", () => { detailDragId = col.id; });
@@ -583,36 +506,11 @@ function buildDetailHeader(){
   });
 }
 
-function renderDetailHiddenBar(){
-  const hidden = detailColumns.filter(c => !c.visible);
-  detailHiddenBar.innerHTML = "";
-  if(!hidden.length){
-    detailHiddenBar.style.display = "none";
-    return;
-  }
-  detailHiddenBar.style.display = "flex";
-
-  hidden.forEach(col => {
-    const pill = document.createElement("div");
-    pill.className = "detail-hidden-pill";
-    pill.innerHTML = `<span>${col.label}</span>`;
-    const btn = document.createElement("button");
-    btn.textContent = "＋";
-    btn.title = "この列を再表示";
-    btn.addEventListener("click", () => {
-      col.visible = true;
-      rebuildDetailTable(lastDetailData);
-    });
-    pill.appendChild(btn);
-    detailHiddenBar.appendChild(pill);
-  });
-}
-
 function fillDetailRow(data){
   detailBodyRow.innerHTML = "";
   if(!data) return;
 
-  visibleCols().forEach(col => {
+  detailColumns.forEach(col => {
     const td = document.createElement("td");
     const value = data[col.id];
     td.textContent = (value === undefined || value === "" || value === null) ? "－" : value;
@@ -625,20 +523,16 @@ function rebuildDetailTable(data){
   buildDetailColumnsFromZones();
   buildDetailHeader();
   fillDetailRow(data);
-  renderDetailHiddenBar();
 }
 
-/* =========================
-   Apply metrics layout
-========================= */
+/* Apply metrics layout */
 function applyMetricsLayout(data){
   renderCenterMetrics(data || {});
   rebuildDetailTable(data || {});
 }
 
 /* =========================
-   Render detail view
-   ★重量（容積重量）に変更
+   Detail render（左枠：重量（容積重量））
 ========================= */
 function pickNumberLike(v){
   if(v == null) return "";
@@ -670,7 +564,6 @@ function renderDetail(asin, data){
   basicCatParent.textContent = data["親カテゴリ"] || "";
   basicCatChild.textContent = data["サブカテゴリ"] || "";
 
-  // ★ 重量（容積重量）表示： 実重量（容積重量）
   const realW = data["重量（kg）"] ?? data["重量kg"] ?? data["重量"] ?? "";
   const volW  = data["容積重量"] ?? "";
   const realWText = realW ? fmtKg(realW) : "－";
@@ -679,7 +572,6 @@ function renderDetail(asin, data){
 
   renderWarningTags(basicWarning, data["注意事項（警告系）"]);
 
-  // 販売価格デフォルト（任意）
   const defaultPrice = data["販売額（ドル）"];
   if (defaultPrice && !sellPriceInput.value) {
     const num = pickNumberLike(defaultPrice);
@@ -719,9 +611,7 @@ asinInput.addEventListener("keydown", (e) => {
   if(e.key === "Enter"){ e.preventDefault(); loadAsin(); }
 });
 
-/* =========================
-   Catalog（ASIN表示の詰まり修正はCSSでも対応）
-========================= */
+/* Catalog */
 function initCatalog(){
   const asins = Object.keys(ASIN_DATA || {});
   headerStatus.textContent = `登録ASIN数：${asins.length}件`;
@@ -746,9 +636,7 @@ function initCatalog(){
   });
 }
 
-/* =========================
-   Init
-========================= */
+/* Init */
 document.addEventListener("DOMContentLoaded", () => {
   attachZoneDrop(metricsPoolZone, "pool");
   attachZoneDrop(metricsCenterZone, "center");
