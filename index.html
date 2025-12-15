@@ -7,12 +7,13 @@
   <link rel="stylesheet" href="styles.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+
 <body>
   <div class="app-shell">
     <header class="app-header">
       <div>
         <h1>MES-AI-A 詳細ビュー</h1>
-        <div class="subtitle">ASIN入力で商品詳細／指標／グラフを表示</div>
+        <div class="subtitle">ASIN入力で商品カードを追加表示（複数ASIN対応）</div>
       </div>
       <div id="headerStatus" class="status"></div>
     </header>
@@ -20,14 +21,16 @@
     <div class="toolbar">
       <label for="asinInput">ASIN：</label>
       <input id="asinInput" type="text" placeholder="例）B0A0000001" />
-      <button id="loadBtn" type="button">表示</button>
+      <button id="addBtn" type="button">追加表示</button>
+      <button id="clearBtn" type="button">全てクリア</button>
     </div>
 
+    <!-- 指標プール（グローバル設定：全ASINに同じ配置が適用される） -->
     <div class="metrics-bar">
       <div class="metrics-bar-head">
         <div class="metrics-bar-title">指標プール（ドラッグして配置）</div>
         <div class="metrics-bar-help">
-          プール → 真ん中枠 / 下段テーブル / 非表示 に移動できます。枠内でも並び替えできます。
+          プール → 真ん中枠 / 下段テーブル / 非表示 に移動できます（各カードに共通で反映）。
         </div>
       </div>
 
@@ -62,171 +65,16 @@
 
     <main class="page-body">
       <div class="content">
-
-        <section id="summaryCard" class="summary-card" style="display:none;">
-          <!-- Left -->
-          <div class="summary-column">
-            <div class="summary-left">
-              <div class="summary-image-box">
-                <img id="prodImage" alt="商品画像" />
-                <div class="qty-row">
-                  <span>数量</span>
-                  <select id="qtySelect">
-                    <option value="1">1</option>
-                    <option value="2">2</option>
-                    <option value="3">3</option>
-                    <option value="4">4</option>
-                    <option value="5">5</option>
-                  </select>
-                </div>
-
-                <div class="price-row">
-                  <span>販売価格 ($)</span>
-                  <input id="sellPriceInput" type="number" step="0.01" placeholder="例: 39.99" />
-                </div>
-
-                <button id="addToCartBtn" class="cart-btn" type="button">カートに入れる</button>
-              </div>
-
-              <div class="summary-basic">
-                <div id="basicTitle" class="summary-title"></div>
-
-                <div class="basic-row">
-                  <div class="basic-label">ブランド</div>
-                  <div id="basicBrand" class="basic-value"></div>
-                </div>
-
-                <div class="basic-row">
-                  <div class="basic-label">評価</div>
-                  <div id="basicRating" class="basic-value"></div>
-                </div>
-
-                <div class="basic-row">
-                  <div class="basic-label">ASIN</div>
-                  <div id="basicASIN" class="basic-value"></div>
-                </div>
-
-                <div class="basic-row">
-                  <div class="basic-label">各種ASIN</div>
-                  <div id="basicAsinGroup" class="basic-value"></div>
-                </div>
-
-                <div class="basic-row">
-                  <div class="basic-label">JAN</div>
-                  <div id="basicJAN" class="basic-value"></div>
-                </div>
-
-                <div class="basic-row">
-                  <div class="basic-label">SKU</div>
-                  <div id="basicSKU" class="basic-value"></div>
-                </div>
-
-                <div class="basic-row">
-                  <div class="basic-label">サイズ</div>
-                  <div id="basicSize" class="basic-value"></div>
-                </div>
-
-                <div class="basic-row">
-                  <div class="basic-label">重量（容積重量）</div>
-                  <div id="basicWeight" class="basic-value"></div>
-                </div>
-
-                <div class="basic-row">
-                  <div class="basic-label">材質</div>
-                  <div id="basicMaterial" class="basic-value"></div>
-                </div>
-
-                <div class="basic-row">
-                  <div class="basic-label">カテゴリ</div>
-                  <div class="basic-value">
-                    <span id="basicCatParent"></span>
-                    <span> / </span>
-                    <span id="basicCatChild"></span>
-                  </div>
-                </div>
-
-                <div class="basic-row warning-inline">
-                  <div class="basic-label">注意事項</div>
-                  <div id="basicWarning" class="basic-value"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Center -->
-          <div class="summary-column">
-            <div class="summary-center">
-              <div class="center-title">主要指標</div>
-              <div id="centerMetricsContainer"></div>
-              <div class="center-note">※ 値はダミーデータ（実運用はAPI/シート連携）</div>
-            </div>
-          </div>
-
-          <!-- Right -->
-          <div class="summary-column">
-            <div class="summary-right">
-              <div class="graph-header">
-                <div class="graph-header-title">グラフ（180日）</div>
-                <div class="graph-switch">
-                  <button id="btnMesGraph" class="graph-switch-btn active" type="button">MES-AI-A</button>
-                  <button id="btnKeepaGraph" class="graph-switch-btn" type="button">Keepa</button>
-                </div>
-              </div>
-
-              <div class="graph-options" id="graphOptions">
-                <label><input type="checkbox" id="chkDemandSupply" checked />《需要＆供給》</label>
-                <label><input type="checkbox" id="chkSupplyPrice" />《供給＆価格》</label>
-              </div>
-
-              <div class="graph-body">
-                <div id="mesGraphWrap" class="graph-canvas-wrap">
-                  <canvas id="mainChart"></canvas>
-                </div>
-
-                <div id="keepaGraphWrap" class="keepa-wrap" style="display:none;">
-                  <iframe id="keepaIframe" src="" frameborder="0" loading="lazy"></iframe>
-                  <div class="keepa-help">Keepaページを表示しています（環境によってはログインが必要です）</div>
-                </div>
-
-                <div class="graph-caption">
-                  表示切替で MES-AI-A / Keepa を切り替えできます（MES側はチェックで線を切替）
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section id="placeholder" class="card">
+        <section id="emptyState" class="card">
           <div class="card-title">
-            ASINを入力してください
-            <span class="card-sub">上部入力欄で ASIN を入れて「表示」</span>
+            ASINを入力して「追加表示」
+            <span class="card-sub">登録済みASINは上のラベルからクリック可能</span>
           </div>
-          <div class="card-body">
-            登録済みASINは上部のラベルから確認できます（クリックで自動入力）。
-          </div>
+          <div class="card-body">入力したASINごとに、下へカードが追加されます。</div>
         </section>
 
-        <section id="detailCard" class="detail-table-wrapper" style="display:none;">
-          <div class="detail-table-container">
-            <div class="detail-table-header-bar">
-              <span>下の段テーブル（その他の指標）</span>
-              <small>指標プールで「下段テーブル」に入れた項目が列になります。</small>
-            </div>
-
-            <div class="detail-table-scroll">
-              <table class="detail-table" id="detailTable">
-                <thead><tr id="detailHeaderRow"></tr></thead>
-                <tbody><tr id="detailBodyRow"></tr></tbody>
-              </table>
-            </div>
-
-            <div class="detail-table-footer">
-              <span>横スクロールで全項目を確認できます。</span>
-              <span>列の並び替えはヘッダーをドラッグしてください。</span>
-            </div>
-          </div>
-        </section>
-
+        <!-- ここにASINカードが積み上がる -->
+        <div id="itemsContainer" class="items-stack"></div>
       </div>
     </main>
   </div>
