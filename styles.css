@@ -485,3 +485,33 @@ body{
     grid-template-columns:1fr;
   }
 }
+/* =========================
+   強制修正：商品画像＋商品情報を横並びに固定
+   （どんなレイアウト指定があっても崩れない）
+========================= */
+
+/* summary-left 自体を横並びに固定 */
+.summary-left{
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: flex-start !important;
+  gap: 12px !important;
+}
+
+/* 画像ブロックは必ず左・固定幅 */
+.summary-left > .summary-image-box{
+  flex: 0 0 120px !important;
+  width: 120px !important;
+}
+
+/* テキストブロックは必ず右 */
+.summary-left > .summary-basic{
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  display: block !important;
+}
+
+/* 親が column 指定でも崩れないよう保険 */
+.summary-column{
+  display: block !important;
+}
