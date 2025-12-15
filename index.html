@@ -9,7 +9,6 @@
 </head>
 <body>
   <div class="app-shell">
-    <!-- Header -->
     <header class="app-header">
       <div>
         <h1>MES-AI-A 詳細ビュー</h1>
@@ -18,14 +17,12 @@
       <div id="headerStatus" class="status"></div>
     </header>
 
-    <!-- Toolbar -->
     <div class="toolbar">
       <label for="asinInput">ASIN：</label>
       <input id="asinInput" type="text" placeholder="例）B0A0000001" />
       <button id="loadBtn" type="button">表示</button>
     </div>
 
-    <!-- Metrics Pool Bar -->
     <div class="metrics-bar">
       <div class="metrics-bar-head">
         <div class="metrics-bar-title">指標プール（ドラッグして配置）</div>
@@ -61,15 +58,13 @@
       </div>
     </div>
 
-    <!-- ASIN Catalog -->
     <div class="asin-catalog" id="asinCatalog"></div>
 
-    <!-- Main -->
     <main class="page-body">
       <div class="content">
-        <!-- Summary (Top 3 cards) -->
+
         <section id="summaryCard" class="summary-card" style="display:none;">
-          <!-- Left: Product Info -->
+          <!-- Left -->
           <div class="summary-column">
             <div class="summary-left">
               <div class="summary-image-box">
@@ -85,13 +80,11 @@
                   </select>
                 </div>
 
-                <!-- ★追加：販売価格（USD） -->
                 <div class="price-row">
                   <span>販売価格 ($)</span>
                   <input id="sellPriceInput" type="number" step="0.01" placeholder="例: 39.99" />
                 </div>
 
-                <!-- ★追加：カート -->
                 <button id="addToCartBtn" class="cart-btn" type="button">カートに入れる</button>
               </div>
 
@@ -133,8 +126,9 @@
                   <div id="basicSize" class="basic-value"></div>
                 </div>
 
+                <!-- ★ここを変更：重量（容積重量） -->
                 <div class="basic-row">
-                  <div class="basic-label">重量</div>
+                  <div class="basic-label">重量（容積重量）</div>
                   <div id="basicWeight" class="basic-value"></div>
                 </div>
 
@@ -152,7 +146,6 @@
                   </div>
                 </div>
 
-                <!-- 注意事項：横並び -->
                 <div class="basic-row warning-inline">
                   <div class="basic-label">注意事項</div>
                   <div id="basicWarning" class="basic-value"></div>
@@ -161,7 +154,7 @@
             </div>
           </div>
 
-          <!-- Center: Key Metrics -->
+          <!-- Center -->
           <div class="summary-column">
             <div class="summary-center">
               <div class="center-title">主要指標</div>
@@ -170,20 +163,17 @@
             </div>
           </div>
 
-          <!-- Right: Graph -->
+          <!-- Right -->
           <div class="summary-column">
             <div class="summary-right">
               <div class="graph-header">
                 <div class="graph-header-title">グラフ（180日）</div>
-
-                <!-- ★追加：MES / Keepa 切り替え -->
                 <div class="graph-switch">
                   <button id="btnMesGraph" class="graph-switch-btn active" type="button">MES-AI-A</button>
                   <button id="btnKeepaGraph" class="graph-switch-btn" type="button">Keepa</button>
                 </div>
               </div>
 
-              <!-- チェックボックス：MES用 -->
               <div class="graph-options" id="graphOptions">
                 <label>
                   <input type="checkbox" id="chkDemandSupply" checked />
@@ -196,17 +186,13 @@
               </div>
 
               <div class="graph-body">
-                <!-- MES -->
                 <div id="mesGraphWrap" class="graph-canvas-wrap">
                   <canvas id="mainChart"></canvas>
                 </div>
 
-                <!-- Keepa -->
                 <div id="keepaGraphWrap" class="keepa-wrap" style="display:none;">
                   <iframe id="keepaIframe" src="" frameborder="0" loading="lazy"></iframe>
-                  <div class="keepa-help">
-                    Keepaページを表示しています（環境によってはログインが必要です）
-                  </div>
+                  <div class="keepa-help">Keepaページを表示しています（環境によってはログインが必要です）</div>
                 </div>
 
                 <div class="graph-caption">
@@ -217,7 +203,6 @@
           </div>
         </section>
 
-        <!-- Placeholder -->
         <section id="placeholder" class="card">
           <div class="card-title">
             ASINを入力してください
@@ -228,7 +213,6 @@
           </div>
         </section>
 
-        <!-- Bottom: Table -->
         <section id="detailCard" class="detail-table-wrapper" style="display:none;">
           <div class="detail-table-container">
             <div class="detail-table-header-bar">
@@ -240,12 +224,8 @@
 
             <div class="detail-table-scroll">
               <table class="detail-table" id="detailTable">
-                <thead>
-                  <tr id="detailHeaderRow"></tr>
-                </thead>
-                <tbody>
-                  <tr id="detailBodyRow"></tr>
-                </tbody>
+                <thead><tr id="detailHeaderRow"></tr></thead>
+                <tbody><tr id="detailBodyRow"></tr></tbody>
               </table>
             </div>
 
@@ -255,6 +235,7 @@
             </div>
           </div>
         </section>
+
       </div>
     </main>
   </div>
