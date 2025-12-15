@@ -23,17 +23,23 @@ const basicCatParent = document.getElementById("basicCatParent");
 const basicCatChild = document.getElementById("basicCatChild");
 const basicWarning = document.getElementById("basicWarning");
 
-const centerFBA = document.getElementById("centerFBA");
-const centerFBA3m = document.getElementById("centerFBA3m");
-const centerMargin = document.getElementById("centerMargin");
-const centerProfit = document.getElementById("centerProfit");
-const centerForecast30 = document.getElementById("centerForecast30");
+const centerMetricsContainer = document.getElementById("centerMetricsContainer");
 
 const chkDemandSupply = document.getElementById("chkDemandSupply");
 const chkSupplyPrice = document.getElementById("chkSupplyPrice");
-
 const mainChartCanvas = document.getElementById("mainChart");
+
+/* カスタマイズUI */
+const openMetricsConfigBtn = document.getElementById("openMetricsConfigBtn");
+const metricsConfigPanel = document.getElementById("metricsConfigPanel");
+const metricsConfigClose = document.getElementById("metricsConfigClose");
+const metricsResetBtn = document.getElementById("metricsResetBtn");
+const metricsCenterZone = document.getElementById("metricsCenterZone");
+const metricsTableZone = document.getElementById("metricsTableZone");
+const metricsHiddenZone = document.getElementById("metricsHiddenZone");
+
 let mainChartInstance = null;
+let lastDetailData = null;
 
 /* ========= 疑似乱数 ========= */
 function createPRNG(seedStr) {
@@ -190,7 +196,7 @@ function renderChart(asin) {
   updateChartVisibility();
 }
 
-/* ========= チェックボックスで線の表示切替 ========= */
+/* ========= グラフ線表示切替 ========= */
 function updateChartVisibility() {
   if (!mainChartInstance) return;
 
@@ -210,7 +216,7 @@ function updateChartVisibility() {
 chkDemandSupply.addEventListener("change", updateChartVisibility);
 chkSupplyPrice.addEventListener("change", updateChartVisibility);
 
-/* ========= 注意事項タグ描画 ========= */
+/* ========= 注意事項タグ ========= */
 function renderWarningTags(container, rawText) {
   container.innerHTML = "";
   const text = (rawText || "").trim();
@@ -253,52 +259,216 @@ function renderWarningTags(container, rawText) {
   container.appendChild(wrap);
 }
 
+/* ========= 指標カスタマイズ（真ん中 / 下段） ========= */
+
+const METRICS_STORAGE_KEY = "MES_AI_METRICS_V1";
+
+/* 左の枠にある項目は除外していることに注意 */
+const METRICS_DEFAULT = [
+  // 主に利益・販売・価格まわり
+  { id: "FBA最安値",       label: "FBA最安値",          sourceKey: "FBA最安値",       location: "center" },
+  { id: "過去3月FBA最安値", label: "過去3ヶ月FBA最安値",  sourceKey: "過去3月FBA最安値", location: "center" },
+  { id: "粗利益率予測",     label: "粗利益率予測",        sourceKey: "粗利益率予測",     location: "center" },
+  { id: "粗利益予測",       label: "粗利益額（1個あたり）", sourceKey: "粗利益予測",     location: "center" },
+  { id: "予測30日販売数",   label: "予測30日販売数",      sourceKey: "予測30日販売数",   location: "center" },
+
+  { id: "30日販売数",       label: "30日販売数（実績）",   sourceKey: "30日販売数",       location: "table" },
+  { id: "販売額（ドル）",   label: "販売額（カート価格USD）", sourceKey: "販売額（ドル）", location: "table" },
+  { id: "入金額（円）",     label: "入金額（1個あたり円）",  sourceKey: "入金額（円）",   location: "table" },
+  { id: "在庫数",           label: "在庫数",              sourceKey: "在庫数",           location: "table" },
+  { id: "仕入れ目安単価",   label: "仕入れ目安単価",      sourceKey: "仕入れ目安単価",   location: "table" },
+  { id: "想定送料",         label: "想定送料",            sourceKey: "想定送料",         location: "table" },
+  { id: "関税",             label: "関税",                sourceKey: "関税",             location: "table" }
+];
+
+let metricsConfig = loadMetricsConfig();
+
+function loadMetricsConfig() {
+  try {
+    const raw = localStorage.getItem(METRICS_STORAGE_KEY);
+    if (!raw) return METRICS_DEFAULT.map(m => ({ ...m }));
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return METRICS_DEFAULT.map(m => ({ ...m }));
+    // 不足している指標があれば補完
+    const byId = Object.fromEntries(parsed.map(m => [m.id, m]));
+    METRICS_DEFAULT.forEach(def => {
+      if (!byId[def.id]) {
+        parsed.push({ ...def });
+      }
+    });
+    return parsed;
+  } catch {
+    return METRICS_DEFAULT.map(m => ({ ...m }));
+  }
+}
+function saveMetricsConfig() {
+  localStorage.setItem(METRICS_STORAGE_KEY, JSON.stringify(metricsConfig));
+}
+function metricsByLocation(loc) {
+  return metricsConfig.filter(m => m.location === loc);
+}
+function metricConfigMap() {
+  const map = {};
+  metricsConfig.forEach(m => { map[m.id] = m; });
+  return map;
+}
+
+/* カスタマイズUI描画 */
+let dragMetricId = null;
+
+function renderMetricsConfigUI() {
+  const centerList = metricsByLocation("center");
+  const tableList = metricsByLocation("table");
+  const hiddenList = metricsByLocation("hidden");
+
+  const zones = {
+    center: metricsCenterZone,
+    table: metricsTableZone,
+    hidden: metricsHiddenZone
+  };
+  Object.values(zones).forEach(z => z.innerHTML = "");
+
+  function fillZone(zoneEl, list) {
+    list.forEach(m => {
+      const pill = document.createElement("div");
+      pill.className = "metric-pill";
+      pill.draggable = true;
+      pill.dataset.id = m.id;
+      pill.textContent = m.label;
+
+      pill.addEventListener("dragstart", e => {
+        dragMetricId = m.id;
+        e.dataTransfer.effectAllowed = "move";
+      });
+      zoneEl.appendChild(pill);
+    });
+  }
+
+  fillZone(zones.center, centerList);
+  fillZone(zones.table, tableList);
+  fillZone(zones.hidden, hiddenList);
+}
+
+function attachZoneDnD() {
+  const zoneMap = {
+    center: metricsCenterZone,
+    table: metricsTableZone,
+    hidden: metricsHiddenZone
+  };
+  Object.entries(zoneMap).forEach(([loc, el]) => {
+    el.parentElement.addEventListener("dragover", e => {
+      e.preventDefault();
+      el.parentElement.classList.add("metrics-zone-over");
+    });
+    el.parentElement.addEventListener("dragleave", () => {
+      el.parentElement.classList.remove("metrics-zone-over");
+    });
+    el.parentElement.addEventListener("drop", e => {
+      e.preventDefault();
+      el.parentElement.classList.remove("metrics-zone-over");
+      if (!dragMetricId) return;
+      const idx = metricsConfig.findIndex(m => m.id === dragMetricId);
+      if (idx === -1) return;
+      const [moved] = metricsConfig.splice(idx, 1);
+      moved.location = loc;
+      metricsConfig.push(moved);
+      dragMetricId = null;
+      saveMetricsConfig();
+      renderMetricsConfigUI();
+      applyMetricsLayout();
+    });
+  });
+}
+
+/* 真ん中カードへ指標を反映 */
+function renderCenterMetrics(data) {
+  centerMetricsContainer.innerHTML = "";
+  const list = metricsByLocation("center");
+  if (!list.length) {
+    const row = document.createElement("div");
+    row.className = "center-row";
+    row.innerHTML = `<div class="center-row-label">表示する指標が未設定です</div>
+                     <div class="center-row-value" style="font-weight:400;color:#9ca3af;">
+                       「指標カスタマイズ」から選択してください
+                     </div>`;
+    centerMetricsContainer.appendChild(row);
+    return;
+  }
+  list.forEach(m => {
+    const row = document.createElement("div");
+    row.className = "center-row";
+    const label = document.createElement("div");
+    label.className = "center-row-label";
+    label.textContent = m.label;
+    const value = document.createElement("div");
+    value.className = "center-row-value";
+    value.textContent = data ? (data[m.sourceKey] || "－") : "－";
+    row.appendChild(label);
+    row.appendChild(value);
+    centerMetricsContainer.appendChild(row);
+  });
+}
+
 /* ========= 下段テーブル定義 ========= */
-/* JAN / SKU / サイズ / 重量 / 材質 はテーブルから除外済み */
+/* 左の枠にある項目（ブランド/ASIN/JAN/SKUなど）は含めない */
 
 const detailHeaderRow = document.getElementById("detailHeaderRow");
 const detailBodyRow   = document.getElementById("detailBodyRow");
 const detailHiddenBar = document.getElementById("detailHiddenBar");
 
 const DETAIL_COLUMNS_DEF = [
-  { id: "アメリカASIN",       label: "アメリカASIN",   sub:"US Listing",       visible:true  },
-  { id: "日本ASIN",           label: "日本ASIN",       sub:"JP Listing",       visible:true  },
-  { id: "個数",               label: "個数",           sub:"1注文あたり",     visible:true  },
-  { id: "30日販売数",         label: "30日販売数",     sub:"実績",             visible:true  },
-  { id: "90日販売数",         label: "90日販売数",     sub:"実績",             visible:false },
-  { id: "180日販売数",        label: "180日販売数",    sub:"実績",             visible:false },
-  { id: "複数在庫指数45日分", label: "複数在庫指数",   sub:"45日分",           visible:false },
-  { id: "複数在庫指数60日分", label: "複数在庫指数",   sub:"60日分",           visible:false },
-  { id: "ライバル偏差1",      label: "ライバル偏差",   sub:"×1",               visible:false },
-  { id: "ライバル偏差2",      label: "ライバル偏差",   sub:"×2",               visible:false },
-  { id: "ライバル増加率",     label: "ライバル増加率", sub:"",                 visible:false },
-  { id: "在庫数",             label: "在庫数",         sub:"FBA + FBM",        visible:true  },
-  { id: "返品率",             label: "返品率",         sub:"過去実績",         visible:true  },
-  { id: "販売額（ドル）",     label: "販売額",         sub:"カート価格 (USD)", visible:true  },
-  { id: "入金額（円）",       label: "入金額",         sub:"1個あたり (円)",  visible:true  },
-  { id: "入金額計（円）",     label: "入金額 計",      sub:"数量×入金額",      visible:false },
-  { id: "粗利益率予測",       label: "粗利益率予測",   sub:"1個あたり",       visible:true  },
-  { id: "粗利益予測",         label: "粗利益予測",     sub:"1個あたり (円)",  visible:true  },
-  { id: "粗利益",             label: "粗利益 実績",    sub:"参考値",           visible:false },
-  { id: "仕入れ目安単価",     label: "仕入れ目安単価", sub:"1個",              visible:true  },
-  { id: "仕入合計",           label: "仕入合計",       sub:"1注文",            visible:false },
-  { id: "仕入計",             label: "仕入 計",        sub:"その他含む",       visible:false },
-  { id: "サイズ感",           label: "サイズ感",       sub:"S / M / L",        visible:false },
-  { id: "容積重量",           label: "容積重量",       sub:"kg換算",           visible:false },
-  { id: "大型",               label: "大型判定",       sub:"FBA基準",         visible:true  },
-  { id: "請求重量",           label: "請求重量",       sub:"課金用",           visible:false },
-  { id: "想定送料",           label: "想定送料",       sub:"弊社想定",         visible:true  },
-  { id: "送料",               label: "送料",           sub:"実費",             visible:false },
-  { id: "関税",               label: "関税",           sub:"推定",             visible:true  },
-  { id: "Keepaリンク",        label: "Keepa グラフ",   sub:"US Amazon",        visible:true  }
+  // 中央カードと共通利用する指標
+  { id: "FBA最安値",         label: "FBA最安値",           sub:"",                 visible:false },
+  { id: "過去3月FBA最安値",   label: "過去3ヶ月FBA最安値",   sub:"",                 visible:false },
+  { id: "粗利益率予測",       label: "粗利益率予測",         sub:"1個あたり",       visible:true  },
+  { id: "粗利益予測",         label: "粗利益予測",           sub:"1個あたり(円)",   visible:true  },
+  { id: "予測30日販売数",     label: "予測30日販売数",       sub:"予測",             visible:false },
+  { id: "30日販売数",         label: "30日販売数",           sub:"実績",             visible:true  },
+  { id: "販売額（ドル）",     label: "販売額",               sub:"カート価格USD",   visible:true  },
+  { id: "入金額（円）",       label: "入金額",               sub:"1個あたり(円)",   visible:true  },
+  { id: "入金額計（円）",     label: "入金額 計",            sub:"数量×入金額",     visible:false },
+  { id: "在庫数",             label: "在庫数",               sub:"FBA+FBM",         visible:true  },
+  { id: "仕入れ目安単価",     label: "仕入れ目安単価",       sub:"1個",              visible:true  },
+  { id: "想定送料",           label: "想定送料",             sub:"弊社想定",         visible:true  },
+  { id: "関税",               label: "関税",                 sub:"推定",             visible:true  },
+
+  // それ以外の指標（テーブル専用）
+  { id: "90日販売数",         label: "90日販売数",           sub:"実績",             visible:false },
+  { id: "180日販売数",        label: "180日販売数",          sub:"実績",             visible:false },
+  { id: "複数在庫指数45日分", label: "複数在庫指数",         sub:"45日分",           visible:false },
+  { id: "複数在庫指数60日分", label: "複数在庫指数",         sub:"60日分",           visible:false },
+  { id: "ライバル偏差1",      label: "ライバル偏差",         sub:"×1",               visible:false },
+  { id: "ライバル偏差2",      label: "ライバル偏差",         sub:"×2",               visible:false },
+  { id: "ライバル増加率",     label: "ライバル増加率",       sub:"",                 visible:false },
+  { id: "返品率",             label: "返品率",               sub:"過去実績",         visible:true  },
+  { id: "粗利益",             label: "粗利益 実績",          sub:"参考値",           visible:false },
+  { id: "仕入合計",           label: "仕入合計",             sub:"1注文",            visible:false },
+  { id: "仕入計",             label: "仕入 計",              sub:"その他含む",       visible:false },
+  { id: "サイズ感",           label: "サイズ感",             sub:"S / M / L",        visible:false },
+  { id: "容積重量",           label: "容積重量",             sub:"kg換算",           visible:false },
+  { id: "大型",               label: "大型判定",             sub:"FBA基準",         visible:true  },
+  { id: "請求重量",           label: "請求重量",             sub:"課金用",           visible:false },
+  { id: "送料",               label: "送料",                 sub:"実費",             visible:false },
+  { id: "Keepaリンク",        label: "Keepa グラフ",         sub:"US Amazon",        visible:true  }
 ];
 
-let detailColumns = DETAIL_COLUMNS_DEF.map(c => ({...c}));
+let detailColumns = DETAIL_COLUMNS_DEF.map(c => ({ ...c }));
 let detailDragId = null;
-let lastDetailData = null;
 
 function visibleCols() {
   return detailColumns.filter(c => c.visible !== false);
+}
+
+/* メトリクス設定に合わせて列を調整
+   → 真ん中に置かれている指標はテーブルでは強制的に非表示 */
+function syncColumnsWithMetrics() {
+  const map = metricConfigMap();
+  detailColumns.forEach(c => {
+    const m = map[c.id];
+    if (m && m.location === "center") {
+      c.visible = false;
+    }
+  });
 }
 
 function buildDetailHeader() {
@@ -412,6 +582,7 @@ function fillDetailRow(data) {
 
 function rebuildDetailTable(data) {
   lastDetailData = data;
+  syncColumnsWithMetrics();
   buildDetailHeader();
   fillDetailRow(data);
   renderDetailHiddenBar();
@@ -427,39 +598,36 @@ function renderDetail(asin, data) {
   basicRating.textContent = data["レビュー評価"] || "";
   basicASIN.textContent = asin;
 
-  // 各種ASIN（日本 / US）
   const jpAsin = data["日本ASIN"] || "－";
   const usAsin = data["アメリカASIN"] || asin;
   basicAsinGroup.textContent = `日本: ${jpAsin} / US: ${usAsin}`;
 
-  // JAN / SKU
   basicJAN.textContent = data["JAN"] || "－";
   basicSKU.textContent = data["SKU"] || "－";
 
-  // サイズ / 重量 / 材質
   basicSize.textContent = data["サイズ"] || "－";
   basicWeight.textContent = data["重量kg"] || "－";
   basicMaterial.textContent = data["材質"] || "－";
 
-  // カテゴリ・注意事項
   basicCatParent.textContent = data["親カテゴリ"] || "";
   basicCatChild.textContent = data["サブカテゴリ"] || "";
   renderWarningTags(basicWarning, data["注意事項（警告系）"]);
 
-  // 中央：利益・販売予測
-  centerFBA.textContent = data["FBA最安値"] || "－";
-  centerFBA3m.textContent = data["過去3月FBA最安値"] || "－";
-  centerMargin.textContent = data["粗利益率予測"] || "－";
-  centerProfit.textContent = data["粗利益予測"] || data["粗利益"] || "－";
-  centerForecast30.textContent = data["予測30日販売数"] || "－";
-
   summaryCard.style.display = "grid";
   placeholderCard.style.display = "none";
 
-  rebuildDetailTable(data);
-  detailCard.style.display = "block";
+  // 真ん中カード & テーブル
+  applyMetricsLayout(data);
 
+  detailCard.style.display = "block";
   renderChart(asin);
+}
+
+/* ========= 指標レイアウト反映 ========= */
+function applyMetricsLayout(data) {
+  if (!data) data = lastDetailData;
+  renderCenterMetrics(data || {});
+  rebuildDetailTable(data || lastDetailData);
 }
 
 /* ========= ビュークリア ========= */
@@ -521,7 +689,26 @@ function initCatalog() {
   });
 }
 
+/* ========= カスタマイズUIイベント ========= */
+openMetricsConfigBtn.addEventListener("click", () => {
+  const showing = metricsConfigPanel.style.display !== "none";
+  metricsConfigPanel.style.display = showing ? "none" : "block";
+  if (!showing) {
+    renderMetricsConfigUI();
+  }
+});
+metricsConfigClose.addEventListener("click", () => {
+  metricsConfigPanel.style.display = "none";
+});
+metricsResetBtn.addEventListener("click", () => {
+  metricsConfig = METRICS_DEFAULT.map(m => ({ ...m }));
+  saveMetricsConfig();
+  renderMetricsConfigUI();
+  applyMetricsLayout();
+});
+
 /* ========= 初期化 ========= */
 initCatalog();
-buildDetailHeader();
-renderDetailHiddenBar();
+attachZoneDnD();
+renderMetricsConfigUI();
+applyMetricsLayout();
