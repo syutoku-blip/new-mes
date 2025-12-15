@@ -72,7 +72,6 @@ function renderWarningTags(container, rawText) {
     if (text.includes(keyword)) tags.push({ label: keyword, cls });
   };
 
-  // 指定タグ
   pushIfIncluded("輸出不可", "warning-export-ban");
   pushIfIncluded("知財", "warning-ip");
   pushIfIncluded("大型", "warning-large");
@@ -193,7 +192,10 @@ function renderChart(asin) {
       maintainAspectRatio: false,
       interaction: { mode: "index", intersect: false },
       plugins: {
-        legend: { position: "top", labels: { font: { size: 9 }, boxWidth: 20, boxHeight: 9, padding: 6 } },
+        legend: {
+          position: "top",
+          labels: { font: { size: 9 }, boxWidth: 18, boxHeight: 8, padding: 6 }
+        },
         tooltip: {
           titleFont: { size: 10 },
           bodyFont: { size: 10 },
@@ -261,10 +263,7 @@ btnMesGraph.addEventListener("click", () => setGraphMode("MES"));
 btnKeepaGraph.addEventListener("click", () => {
   setGraphMode("KEEPA");
   const asin = (basicASIN.textContent || "").trim();
-  if (asin) {
-    // Keepa product page (amazon=1 = US)
-    keepaIframe.src = `https://keepa.com/#!product/1-${asin}`;
-  }
+  if (asin) keepaIframe.src = `https://keepa.com/#!product/1-${asin}`;
 });
 
 /* =========================
@@ -275,14 +274,8 @@ addToCartBtn.addEventListener("click", () => {
   const qty = Number(qtySelect.value || 1);
   const price = Number(sellPriceInput.value || 0);
 
-  if (!asin) {
-    alert("ASINが未選択です");
-    return;
-  }
-  if (!price || price <= 0) {
-    alert("販売価格（$）を入力してください");
-    return;
-  }
+  if (!asin) return alert("ASINが未選択です");
+  if (!price || price <= 0) return alert("販売価格（$）を入力してください");
 
   const payload = { asin, qty, price, total: +(qty * price).toFixed(2) };
   console.log("ADD_TO_CART", payload);
@@ -291,8 +284,9 @@ addToCartBtn.addEventListener("click", () => {
 
 /* =========================
    Metrics pool (DnD)
+   ★Keepa削除 / サイズ感削除
 ========================= */
-const METRICS_STORAGE_KEY = "MES_AI_METRICS_ZONES_V3";
+const METRICS_STORAGE_KEY = "MES_AI_METRICS_ZONES_V4";
 
 /* 左枠にある項目はプールに出さない（=ここに含めない） */
 const METRICS_ALL = [
@@ -324,34 +318,30 @@ const METRICS_ALL = [
 
   { id: "大型", label: "大型判定", sourceKey: "大型" },
   { id: "請求重量", label: "請求重量", sourceKey: "請求重量" },
+  /* 容積重量は左枠に表示するので「指標としては残すか？」→今回は残しておく（必要なら後で外せる） */
   { id: "容積重量", label: "容積重量", sourceKey: "容積重量" },
-  { id: "サイズ感", label: "サイズ感", sourceKey: "サイズ感" },
 
   { id: "想定送料", label: "想定送料", sourceKey: "想定送料" },
   { id: "送料", label: "送料", sourceKey: "送料" },
-  { id: "関税", label: "関税", sourceKey: "関税" },
+  { id: "関税", label: "関税", sourceKey: "関税" }
 
-  { id: "Keepaリンク", label: "Keepa（リンク）", sourceKey: "Keepaリンク" }
+  /* ★Keepaリンク削除 */
+  /* ★サイズ感削除 */
 ];
 
 const DEFAULT_ZONES = {
   pool: [
     "90日販売数","180日販売数","複数在庫指数45日分","複数在庫指数60日分",
     "ライバル偏差1","ライバル偏差2","ライバル増加率",
-    "入金額計（円）","仕入合計","仕入計","サイズ感","容積重量","請求重量","送料","Keepaリンク"
+    "入金額計（円）","仕入合計","仕入計","容積重量","請求重量","送料"
   ],
   center: ["FBA最安値","過去3月FBA最安値","粗利益率予測","粗利益予測","予測30日販売数"],
   table: ["30日販売数","在庫数","返品率","販売額（ドル）","入金額（円）","仕入れ目安単価","想定送料","関税","大型"],
   hidden: []
 };
 
-function structuredCloneSafe(obj){
-  return JSON.parse(JSON.stringify(obj));
-}
-
-function metricById(id){
-  return METRICS_ALL.find(m => m.id === id);
-}
+function structuredCloneSafe(obj){ return JSON.parse(JSON.stringify(obj)); }
+function metricById(id){ return METRICS_ALL.find(m => m.id === id); }
 
 function sanitizeZones(zones){
   const allIds = METRICS_ALL.map(m => m.id);
@@ -361,15 +351,12 @@ function sanitizeZones(zones){
     z[k] = Array.isArray(zones?.[k]) ? zones[k].filter(id => allIds.includes(id)) : [];
   });
 
-  // もし全部空なら → 初期配置へ
   const total = z.pool.length + z.center.length + z.table.length + z.hidden.length;
   if (total === 0) return structuredCloneSafe(DEFAULT_ZONES);
 
-  // 未配置の指標があればpoolへ
   const used = new Set([...z.pool, ...z.center, ...z.table, ...z.hidden]);
   allIds.forEach(id => { if (!used.has(id)) z.pool.push(id); });
 
-  // 重複除去（どこかに1回だけ）
   const seen = new Set();
   ["pool","center","table","hidden"].forEach(k => {
     z[k] = z[k].filter(id => {
@@ -408,9 +395,8 @@ function moveMetric(id, toZone, beforeId){
   removeFromAllZones(id);
 
   const list = ZONES[toZone];
-  if(!beforeId){
-    list.push(id);
-  }else{
+  if(!beforeId) list.push(id);
+  else{
     const idx = list.indexOf(beforeId);
     if(idx === -1) list.push(id);
     else list.splice(idx, 0, id);
@@ -431,8 +417,6 @@ function renderZone(el, zoneName){
     pill.className = "metric-pill";
     pill.textContent = m.label;
     pill.draggable = true;
-    pill.dataset.metricId = id;
-    pill.dataset.zone = zoneName;
 
     pill.addEventListener("dragstart", (e) => {
       e.dataTransfer.setData("text/plain", id);
@@ -444,16 +428,14 @@ function renderZone(el, zoneName){
       pill.classList.add("drop-before");
     });
 
-    pill.addEventListener("dragleave", () => {
-      pill.classList.remove("drop-before");
-    });
+    pill.addEventListener("dragleave", () => pill.classList.remove("drop-before"));
 
     pill.addEventListener("drop", (e) => {
       e.preventDefault();
       pill.classList.remove("drop-before");
       const draggedId = e.dataTransfer.getData("text/plain");
       if(!draggedId || draggedId === id) return;
-      moveMetric(draggedId, zoneName, id); // idの前に挿入
+      moveMetric(draggedId, zoneName, id);
     });
 
     el.appendChild(pill);
@@ -470,12 +452,11 @@ function attachZoneDrop(listEl, zoneName){
     e.preventDefault();
     const draggedId = e.dataTransfer.getData("text/plain");
     if(!draggedId) return;
-    moveMetric(draggedId, zoneName, null); // 末尾
+    moveMetric(draggedId, zoneName, null);
   });
 }
 
 function renderAllZones(){
-  // 念のため、空になってたら復旧
   ZONES = sanitizeZones(ZONES);
   renderZone(metricsPoolZone, "pool");
   renderZone(metricsCenterZone, "center");
@@ -483,7 +464,6 @@ function renderAllZones(){
   renderZone(metricsHiddenZone, "hidden");
 }
 
-/* reset */
 metricsResetBtn.addEventListener("click", () => {
   ZONES = structuredCloneSafe(DEFAULT_ZONES);
   saveZones();
@@ -534,10 +514,6 @@ function renderCenterMetrics(data){
 let detailColumns = [];
 let detailDragId = null;
 
-const TABLE_TAIL_COLS = [
-  { id: "Keepaリンク", label:"Keepa", sub:"US Amazon", visible:true }
-];
-
 function buildDetailColumnsFromZones(){
   const tableIds = ZONES.table;
   const cols = [];
@@ -548,24 +524,13 @@ function buildDetailColumnsFromZones(){
     cols.push({ id: m.sourceKey, label: m.label, sub:"", visible:true });
   });
 
-  // tail追加（重複しないものだけ）
-  const used = new Set(cols.map(c => c.id));
-  TABLE_TAIL_COLS.forEach(c => {
-    if(!used.has(c.id)) cols.push({ ...c });
-  });
-
-  // 既存の visible 状態を引き継ぐ（同じidがあれば）
   const prev = new Map(detailColumns.map(c => [c.id, c.visible]));
-  cols.forEach(c => {
-    if(prev.has(c.id)) c.visible = prev.get(c.id);
-  });
+  cols.forEach(c => { if(prev.has(c.id)) c.visible = prev.get(c.id); });
 
   detailColumns = cols;
 }
 
-function visibleCols(){
-  return detailColumns.filter(c => c.visible !== false);
-}
+function visibleCols(){ return detailColumns.filter(c => c.visible !== false); }
 
 function buildDetailHeader(){
   detailHeaderRow.innerHTML = "";
@@ -573,7 +538,6 @@ function buildDetailHeader(){
   visibleCols().forEach(col => {
     const th = document.createElement("th");
     th.draggable = true;
-    th.dataset.colId = col.id;
 
     const inner = document.createElement("div");
     inner.className = "th-inner";
@@ -582,13 +546,6 @@ function buildDetailHeader(){
     label.className = "th-label";
     label.textContent = col.label;
     inner.appendChild(label);
-
-    if(col.sub){
-      const sub = document.createElement("span");
-      sub.className = "th-sub";
-      sub.textContent = col.sub;
-      inner.appendChild(sub);
-    }
 
     const toggle = document.createElement("button");
     toggle.className = "th-toggle";
@@ -604,19 +561,12 @@ function buildDetailHeader(){
     th.appendChild(inner);
     detailHeaderRow.appendChild(th);
 
-    th.addEventListener("dragstart", (e) => {
-      detailDragId = col.id;
-      e.dataTransfer.effectAllowed = "move";
-    });
-    th.addEventListener("dragover", (e) => {
-      e.preventDefault();
-      th.classList.add("drag-over");
-    });
+    th.addEventListener("dragstart", () => { detailDragId = col.id; });
+    th.addEventListener("dragover", (e) => { e.preventDefault(); th.classList.add("drag-over"); });
     th.addEventListener("dragleave", () => th.classList.remove("drag-over"));
     th.addEventListener("drop", (e) => {
       e.preventDefault();
       th.classList.remove("drag-over");
-
       const targetId = col.id;
       if(!detailDragId || detailDragId === targetId) return;
 
@@ -665,17 +615,7 @@ function fillDetailRow(data){
   visibleCols().forEach(col => {
     const td = document.createElement("td");
     const value = data[col.id];
-
-    if(col.id === "Keepaリンク" && value){
-      const a = document.createElement("a");
-      a.href = value;
-      a.target = "_blank";
-      a.rel = "noopener noreferrer";
-      a.textContent = "グラフを開く";
-      td.appendChild(a);
-    }else{
-      td.textContent = (value === undefined || value === "" || value === null) ? "－" : value;
-    }
+    td.textContent = (value === undefined || value === "" || value === null) ? "－" : value;
     detailBodyRow.appendChild(td);
   });
 }
@@ -698,9 +638,21 @@ function applyMetricsLayout(data){
 
 /* =========================
    Render detail view
+   ★重量（容積重量）に変更
 ========================= */
+function pickNumberLike(v){
+  if(v == null) return "";
+  const s = String(v).trim();
+  if(!s) return "";
+  return s.replace(/[^\d.]/g, "");
+}
+function fmtKg(v){
+  const s = String(v ?? "").trim();
+  if(!s) return "";
+  return s.includes("kg") ? s : `${s}kg`;
+}
+
 function renderDetail(asin, data){
-  // Left card
   prodImage.src = data["商品画像"] || "";
   basicTitle.textContent = data["品名"] || "";
   basicBrand.textContent = data["ブランド"] || "";
@@ -714,18 +666,23 @@ function renderDetail(asin, data){
   basicJAN.textContent = data["JAN"] || "－";
   basicSKU.textContent = data["SKU"] || "－";
   basicSize.textContent = data["サイズ"] || "－";
-  basicWeight.textContent = data["重量kg"] || "－";
   basicMaterial.textContent = data["材質"] || "－";
   basicCatParent.textContent = data["親カテゴリ"] || "";
   basicCatChild.textContent = data["サブカテゴリ"] || "";
 
+  // ★ 重量（容積重量）表示： 実重量（容積重量）
+  const realW = data["重量（kg）"] ?? data["重量kg"] ?? data["重量"] ?? "";
+  const volW  = data["容積重量"] ?? "";
+  const realWText = realW ? fmtKg(realW) : "－";
+  const volWText  = volW ? fmtKg(volW) : "－";
+  basicWeight.textContent = `${realWText}（${volWText}）`;
+
   renderWarningTags(basicWarning, data["注意事項（警告系）"]);
 
-  // Set default sell price if exists (optional)
+  // 販売価格デフォルト（任意）
   const defaultPrice = data["販売額（ドル）"];
   if (defaultPrice && !sellPriceInput.value) {
-    // "$39.99" の可能性もあるので数字を抜く
-    const num = String(defaultPrice).replace(/[^0-9.]/g, "");
+    const num = pickNumberLike(defaultPrice);
     if (num) sellPriceInput.value = num;
   }
 
@@ -735,14 +692,10 @@ function renderDetail(asin, data){
 
   applyMetricsLayout(data);
 
-  // Graph
   setGraphMode("MES");
   renderChart(asin);
 }
 
-/* =========================
-   Load ASIN
-========================= */
 function clearView(msg){
   summaryCard.style.display = "none";
   detailCard.style.display = "none";
@@ -755,28 +708,19 @@ function clearView(msg){
 
 function loadAsin(){
   const asin = asinInput.value.trim().toUpperCase();
-  if(!asin){
-    clearView("ASINを入力してください。");
-    return;
-  }
+  if(!asin) return clearView("ASINを入力してください。");
   const data = ASIN_DATA?.[asin];
-  if(!data){
-    clearView(`ASIN「${asin}」のデータがありません。上のラベルから登録済みASINを確認してください。`);
-    return;
-  }
+  if(!data) return clearView(`ASIN「${asin}」のデータがありません。上のラベルから登録済みASINを確認してください。`);
   renderDetail(asin, data);
 }
 
 loadBtn.addEventListener("click", loadAsin);
 asinInput.addEventListener("keydown", (e) => {
-  if(e.key === "Enter"){
-    e.preventDefault();
-    loadAsin();
-  }
+  if(e.key === "Enter"){ e.preventDefault(); loadAsin(); }
 });
 
 /* =========================
-   Catalog
+   Catalog（ASIN表示の詰まり修正はCSSでも対応）
 ========================= */
 function initCatalog(){
   const asins = Object.keys(ASIN_DATA || {});
@@ -806,7 +750,6 @@ function initCatalog(){
    Init
 ========================= */
 document.addEventListener("DOMContentLoaded", () => {
-  // drop attach
   attachZoneDrop(metricsPoolZone, "pool");
   attachZoneDrop(metricsCenterZone, "center");
   attachZoneDrop(metricsTableZone, "table");
