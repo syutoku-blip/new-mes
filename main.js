@@ -1,51 +1,13 @@
 /* =========================
-   DOM
+   Global DOM
 ========================= */
 const asinInput = document.getElementById("asinInput");
-const loadBtn = document.getElementById("loadBtn");
+const addBtn = document.getElementById("addBtn");
+const clearBtn = document.getElementById("clearBtn");
 const headerStatus = document.getElementById("headerStatus");
 const asinCatalog = document.getElementById("asinCatalog");
-
-const summaryCard = document.getElementById("summaryCard");
-const placeholderCard = document.getElementById("placeholder");
-const detailCard = document.getElementById("detailCard");
-
-const prodImage = document.getElementById("prodImage");
-const qtySelect = document.getElementById("qtySelect");
-const sellPriceInput = document.getElementById("sellPriceInput");
-const addToCartBtn = document.getElementById("addToCartBtn");
-
-const basicTitle = document.getElementById("basicTitle");
-const basicBrand = document.getElementById("basicBrand");
-const basicRating = document.getElementById("basicRating");
-const basicASIN = document.getElementById("basicASIN");
-const basicAsinGroup = document.getElementById("basicAsinGroup");
-const basicJAN = document.getElementById("basicJAN");
-const basicSKU = document.getElementById("basicSKU");
-const basicSize = document.getElementById("basicSize");
-const basicWeight = document.getElementById("basicWeight");
-const basicMaterial = document.getElementById("basicMaterial");
-const basicCatParent = document.getElementById("basicCatParent");
-const basicCatChild = document.getElementById("basicCatChild");
-const basicWarning = document.getElementById("basicWarning");
-
-const centerMetricsContainer = document.getElementById("centerMetricsContainer");
-
-const btnMesGraph = document.getElementById("btnMesGraph");
-const btnKeepaGraph = document.getElementById("btnKeepaGraph");
-const graphOptions = document.getElementById("graphOptions");
-const mesGraphWrap = document.getElementById("mesGraphWrap");
-const keepaGraphWrap = document.getElementById("keepaGraphWrap");
-const keepaIframe = document.getElementById("keepaIframe");
-
-const chkDemandSupply = document.getElementById("chkDemandSupply");
-const chkSupplyPrice = document.getElementById("chkSupplyPrice");
-const mainChartCanvas = document.getElementById("mainChart");
-let mainChartInstance = null;
-
-const detailHeaderRow = document.getElementById("detailHeaderRow");
-const detailBodyRow = document.getElementById("detailBodyRow");
-let lastDetailData = null;
+const emptyState = document.getElementById("emptyState");
+const itemsContainer = document.getElementById("itemsContainer");
 
 /* Metrics pool zones */
 const metricsPoolZone = document.getElementById("metricsPoolZone");
@@ -98,7 +60,7 @@ function renderWarningTags(container, rawText) {
 }
 
 /* =========================
-   Chart (MES)
+   Chart helpers
 ========================= */
 function createPRNG(seedStr) {
   let seed = 0;
@@ -146,12 +108,11 @@ function getDemandSupplySeries(asin) {
   };
 }
 
-function renderChart(asin) {
+function renderChart(canvasEl, asin) {
   const series = getDemandSupplySeries(asin);
-  if (mainChartInstance) mainChartInstance.destroy();
+  const ctx = canvasEl.getContext("2d");
 
-  const ctx = mainChartCanvas.getContext("2d");
-  mainChartInstance = new Chart(ctx, {
+  return new Chart(ctx, {
     type: "line",
     data: {
       labels: series.labels,
@@ -185,75 +146,25 @@ function renderChart(asin) {
       }
     }
   });
-
-  chkDemandSupply.checked = true;
-  chkSupplyPrice.checked = false;
-  updateChartVisibility();
 }
 
-function updateChartVisibility() {
-  if (!mainChartInstance) return;
-
-  const demandOn = chkDemandSupply.checked;
-  const supplyOn = chkSupplyPrice.checked;
-
+function updateChartVisibility(chart, demandOn, supplyOn) {
   const showRank = demandOn || (!demandOn && !supplyOn);
   const showSeller = demandOn || supplyOn;
   const showPrice = supplyOn;
 
-  mainChartInstance.data.datasets[0].hidden = !showRank;
-  mainChartInstance.data.datasets[1].hidden = !showSeller;
-  mainChartInstance.data.datasets[2].hidden = !showPrice;
-  mainChartInstance.update();
+  chart.data.datasets[0].hidden = !showRank;
+  chart.data.datasets[1].hidden = !showSeller;
+  chart.data.datasets[2].hidden = !showPrice;
+  chart.update();
 }
-
-chkDemandSupply.addEventListener("change", updateChartVisibility);
-chkSupplyPrice.addEventListener("change", updateChartVisibility);
-
-/* Graph switch */
-function setGraphMode(mode) {
-  if (mode === "MES") {
-    btnMesGraph.classList.add("active");
-    btnKeepaGraph.classList.remove("active");
-    graphOptions.style.display = "flex";
-    mesGraphWrap.style.display = "block";
-    keepaGraphWrap.style.display = "none";
-  } else {
-    btnKeepaGraph.classList.add("active");
-    btnMesGraph.classList.remove("active");
-    graphOptions.style.display = "none";
-    mesGraphWrap.style.display = "none";
-    keepaGraphWrap.style.display = "flex";
-  }
-}
-
-btnMesGraph.addEventListener("click", () => setGraphMode("MES"));
-btnKeepaGraph.addEventListener("click", () => {
-  setGraphMode("KEEPA");
-  const asin = (basicASIN.textContent || "").trim();
-  if (asin) keepaIframe.src = `https://keepa.com/#!product/1-${asin}`;
-});
-
-/* Cart */
-addToCartBtn.addEventListener("click", () => {
-  const asin = (basicASIN.textContent || "").trim();
-  const qty = Number(qtySelect.value || 1);
-  const price = Number(sellPriceInput.value || 0);
-
-  if (!asin) return alert("ASINが未選択です");
-  if (!price || price <= 0) return alert("販売価格（$）を入力してください");
-
-  const payload = { asin, qty, price, total: +(qty * price).toFixed(2) };
-  console.log("ADD_TO_CART", payload);
-  alert(`カートに追加しました\nASIN: ${asin}\n数量: ${qty}\n価格: $${price}\n小計: $${payload.total}`);
-});
 
 /* =========================
-   Metrics pool (DnD)
+   Metrics pool (global)
 ========================= */
-const METRICS_STORAGE_KEY = "MES_AI_METRICS_ZONES_V4";
+const METRICS_STORAGE_KEY = "MES_AI_METRICS_ZONES_V5";
 
-/* 左枠にある項目はここに入れない（ブランド/評価/ASIN/各種ASIN/JAN/SKU/サイズ/重量/材質/カテゴリ/注意事項） */
+/* 左枠にある項目は入れない（ブランド/評価/ASIN/各種ASIN/JAN/SKU/サイズ/重量/材質/カテゴリ/注意事項） */
 const METRICS_ALL = [
   { id: "FBA最安値", label: "FBA最安値", sourceKey: "FBA最安値" },
   { id: "過去3月FBA最安値", label: "過去3ヶ月FBA最安値", sourceKey: "過去3月FBA最安値" },
@@ -325,7 +236,7 @@ function sanitizeZones(zones){
   return z;
 }
 
-function loadZones(){
+let ZONES = (function loadZones(){
   try{
     const raw = localStorage.getItem(METRICS_STORAGE_KEY);
     if(!raw) return structuredCloneSafe(DEFAULT_ZONES);
@@ -333,13 +244,11 @@ function loadZones(){
   }catch{
     return structuredCloneSafe(DEFAULT_ZONES);
   }
-}
+})();
 
 function saveZones(){
   localStorage.setItem(METRICS_STORAGE_KEY, JSON.stringify(ZONES));
 }
-
-let ZONES = loadZones();
 
 function removeFromAllZones(id){
   ["pool","center","table","hidden"].forEach(z => {
@@ -360,7 +269,7 @@ function moveMetric(id, toZone, beforeId){
 
   saveZones();
   renderAllZones();
-  applyMetricsLayout(lastDetailData);
+  rerenderAllCards(); // 全カードに反映
 }
 
 function renderZone(el, zoneName){
@@ -424,20 +333,36 @@ metricsResetBtn.addEventListener("click", () => {
   ZONES = structuredCloneSafe(DEFAULT_ZONES);
   saveZones();
   renderAllZones();
-  applyMetricsLayout(lastDetailData);
+  rerenderAllCards();
 });
 
-/* Center metrics */
-function renderCenterMetrics(data){
-  centerMetricsContainer.innerHTML = "";
+/* =========================
+   Card builder (multiple ASIN)
+========================= */
+const cardState = new Map(); // asin -> { el, data, chart, cols }
+
+function pickNumberLike(v){
+  if(v == null) return "";
+  const s = String(v).trim();
+  if(!s) return "";
+  return s.replace(/[^\d.]/g, "");
+}
+function fmtKg(v){
+  const s = String(v ?? "").trim();
+  if(!s) return "";
+  return s.includes("kg") ? s : `${s}kg`;
+}
+
+function buildCenterMetrics(container, data){
+  container.innerHTML = "";
   const ids = ZONES.center;
 
   if(!ids.length){
     const row = document.createElement("div");
     row.className = "center-row";
-    row.innerHTML = `<div class="center-row-label">表示する指標が未設定</div>
-                     <div class="center-row-value" style="font-weight:700;color:#9ca3af;">上の指標プールからドラッグ</div>`;
-    centerMetricsContainer.appendChild(row);
+    row.innerHTML = `<div class="center-row-label">未設定</div>
+                     <div class="center-row-value" style="font-weight:700;color:#9ca3af;">上のプールからドラッグ</div>`;
+    container.appendChild(row);
     return;
   }
 
@@ -458,160 +383,305 @@ function renderCenterMetrics(data){
 
     row.appendChild(l);
     row.appendChild(v);
-    centerMetricsContainer.appendChild(row);
+    container.appendChild(row);
   });
 }
 
-/* =========================
-   Table build（★列セルUIなし：非表示機能も撤廃）
-========================= */
-let detailColumns = [];
-let detailDragId = null;
-
-function buildDetailColumnsFromZones(){
-  const tableIds = ZONES.table;
-  detailColumns = tableIds
+function buildTableColumnsFromZones(){
+  return ZONES.table
     .map(metricId => metricById(metricId))
     .filter(Boolean)
     .map(m => ({ id: m.sourceKey, label: m.label }));
 }
 
-function buildDetailHeader(){
-  detailHeaderRow.innerHTML = "";
-  detailColumns.forEach(col => {
-    const th = document.createElement("th");
-    th.draggable = true;
-    th.textContent = col.label;
-    detailHeaderRow.appendChild(th);
+function buildDetailTable(tableEl, data, state){
+  const headerRow = tableEl.querySelector("tr[data-role='header']");
+  const bodyRow = tableEl.querySelector("tr[data-role='body']");
+  headerRow.innerHTML = "";
+  bodyRow.innerHTML = "";
 
-    th.addEventListener("dragstart", () => { detailDragId = col.id; });
+  state.cols.forEach(col => {
+    const th = document.createElement("th");
+    th.textContent = col.label;
+    th.draggable = true;
+    headerRow.appendChild(th);
+
+    th.addEventListener("dragstart", () => { state.dragId = col.id; });
     th.addEventListener("dragover", (e) => { e.preventDefault(); th.classList.add("drag-over"); });
     th.addEventListener("dragleave", () => th.classList.remove("drag-over"));
     th.addEventListener("drop", (e) => {
       e.preventDefault();
       th.classList.remove("drag-over");
       const targetId = col.id;
-      if(!detailDragId || detailDragId === targetId) return;
+      const src = state.cols.findIndex(c => c.id === state.dragId);
+      const dst = state.cols.findIndex(c => c.id === targetId);
+      if(src === -1 || dst === -1 || src === dst) return;
 
-      const src = detailColumns.findIndex(c => c.id === detailDragId);
-      const dst = detailColumns.findIndex(c => c.id === targetId);
-      if(src === -1 || dst === -1) return;
+      const [moved] = state.cols.splice(src, 1);
+      state.cols.splice(dst, 0, moved);
+      state.dragId = null;
 
-      const [moved] = detailColumns.splice(src, 1);
-      detailColumns.splice(dst, 0, moved);
-
-      detailDragId = null;
-      rebuildDetailTable(lastDetailData);
+      buildDetailTable(tableEl, data, state);
     });
   });
-}
 
-function fillDetailRow(data){
-  detailBodyRow.innerHTML = "";
-  if(!data) return;
-
-  detailColumns.forEach(col => {
+  state.cols.forEach(col => {
     const td = document.createElement("td");
     const value = data[col.id];
     td.textContent = (value === undefined || value === "" || value === null) ? "－" : value;
-    detailBodyRow.appendChild(td);
+    bodyRow.appendChild(td);
   });
 }
 
-function rebuildDetailTable(data){
-  lastDetailData = data;
-  buildDetailColumnsFromZones();
-  buildDetailHeader();
-  fillDetailRow(data);
-}
+function createProductCard(asin, data){
+  const card = document.createElement("section");
+  card.className = "product-card";
+  card.dataset.asin = asin;
 
-/* Apply metrics layout */
-function applyMetricsLayout(data){
-  renderCenterMetrics(data || {});
-  rebuildDetailTable(data || {});
-}
+  card.innerHTML = `
+    <div class="summary-row">
+      <div class="summary-column">
+        <div class="summary-left">
+          <div class="summary-image-box">
+            <img class="js-prodImage" alt="商品画像" />
+            <div class="qty-row">
+              <span>数量</span>
+              <select class="js-qtySelect">
+                <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+                <option value="4">4</option><option value="5">5</option>
+              </select>
+            </div>
+            <div class="price-row">
+              <span>販売価格 ($)</span>
+              <input class="js-sellPrice" type="number" step="0.01" placeholder="例: 39.99" />
+            </div>
+            <button class="cart-btn js-addCart" type="button">カートに入れる</button>
+          </div>
 
-/* =========================
-   Detail render（左枠：重量（容積重量））
-========================= */
-function pickNumberLike(v){
-  if(v == null) return "";
-  const s = String(v).trim();
-  if(!s) return "";
-  return s.replace(/[^\d.]/g, "");
-}
-function fmtKg(v){
-  const s = String(v ?? "").trim();
-  if(!s) return "";
-  return s.includes("kg") ? s : `${s}kg`;
-}
+          <div class="summary-basic">
+            <div class="summary-title js-title"></div>
 
-function renderDetail(asin, data){
-  prodImage.src = data["商品画像"] || "";
-  basicTitle.textContent = data["品名"] || "";
-  basicBrand.textContent = data["ブランド"] || "";
-  basicRating.textContent = data["レビュー評価"] || "";
-  basicASIN.textContent = asin;
+            <div class="basic-row"><div class="basic-label">ブランド</div><div class="basic-value js-brand"></div></div>
+            <div class="basic-row"><div class="basic-label">評価</div><div class="basic-value js-rating"></div></div>
+            <div class="basic-row"><div class="basic-label">ASIN</div><div class="basic-value js-asin"></div></div>
+            <div class="basic-row"><div class="basic-label">各種ASIN</div><div class="basic-value js-asins"></div></div>
+            <div class="basic-row"><div class="basic-label">JAN</div><div class="basic-value js-jan"></div></div>
+            <div class="basic-row"><div class="basic-label">SKU</div><div class="basic-value js-sku"></div></div>
+            <div class="basic-row"><div class="basic-label">サイズ</div><div class="basic-value js-size"></div></div>
+            <div class="basic-row"><div class="basic-label">重量（容積重量）</div><div class="basic-value js-weight"></div></div>
+            <div class="basic-row"><div class="basic-label">材質</div><div class="basic-value js-material"></div></div>
+            <div class="basic-row">
+              <div class="basic-label">カテゴリ</div>
+              <div class="basic-value"><span class="js-catP"></span> / <span class="js-catC"></span></div>
+            </div>
+            <div class="basic-row warning-inline">
+              <div class="basic-label">注意事項</div>
+              <div class="basic-value js-warning"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="summary-column">
+        <div class="center-title">主要指標</div>
+        <div class="js-center"></div>
+        <div class="center-note" style="margin-top:8px;font-size:10px;color:#92400e;">
+          ※ 値はダミーデータ（実運用はAPI/シート連携）
+        </div>
+      </div>
+
+      <div class="summary-column">
+        <div class="summary-right">
+          <div class="graph-header">
+            <div class="graph-header-title">グラフ（180日）</div>
+            <div class="graph-switch">
+              <button class="graph-switch-btn active js-btnMes" type="button">MES-AI-A</button>
+              <button class="graph-switch-btn js-btnKeepa" type="button">Keepa</button>
+            </div>
+          </div>
+
+          <div class="graph-options js-graphOptions">
+            <label><input type="checkbox" class="js-chkDS" checked />《需要＆供給》</label>
+            <label><input type="checkbox" class="js-chkSP" />《供給＆価格》</label>
+          </div>
+
+          <div class="graph-body">
+            <div class="graph-canvas-wrap js-mesWrap">
+              <canvas class="js-chart"></canvas>
+            </div>
+            <div class="keepa-wrap js-keepaWrap" style="display:none;">
+              <iframe class="js-keepaFrame" src="" frameborder="0" loading="lazy"></iframe>
+            </div>
+            <div class="graph-caption">表示切替で MES-AI-A / Keepa を切り替えできます。</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="detail-wrap">
+      <div class="detail-head">
+        <span>下の段テーブル（その他の指標）</span>
+        <small>指標プールで「下段テーブル」に入れた項目が列になります。</small>
+      </div>
+      <div class="detail-scroll">
+        <table class="detail-table js-detailTable">
+          <thead><tr data-role="header"></tr></thead>
+          <tbody><tr data-role="body"></tr></tbody>
+        </table>
+      </div>
+      <div class="detail-foot">
+        <span>横スクロールで全項目を確認できます。</span>
+        <span>列の並び替えはヘッダーをドラッグしてください。</span>
+      </div>
+    </div>
+  `;
+
+  // fill base
+  card.querySelector(".js-prodImage").src = data["商品画像"] || "";
+  card.querySelector(".js-title").textContent = data["品名"] || "";
+  card.querySelector(".js-brand").textContent = data["ブランド"] || "";
+  card.querySelector(".js-rating").textContent = data["レビュー評価"] || "";
+  card.querySelector(".js-asin").textContent = asin;
 
   const jpAsin = data["日本ASIN"] || "－";
   const usAsin = data["アメリカASIN"] || asin;
-  basicAsinGroup.textContent = `日本: ${jpAsin} / US: ${usAsin}`;
+  card.querySelector(".js-asins").textContent = `日本: ${jpAsin} / US: ${usAsin}`;
 
-  basicJAN.textContent = data["JAN"] || "－";
-  basicSKU.textContent = data["SKU"] || "－";
-  basicSize.textContent = data["サイズ"] || "－";
-  basicMaterial.textContent = data["材質"] || "－";
-  basicCatParent.textContent = data["親カテゴリ"] || "";
-  basicCatChild.textContent = data["サブカテゴリ"] || "";
+  card.querySelector(".js-jan").textContent = data["JAN"] || "－";
+  card.querySelector(".js-sku").textContent = data["SKU"] || "－";
+  card.querySelector(".js-size").textContent = data["サイズ"] || "－";
 
   const realW = data["重量（kg）"] ?? data["重量kg"] ?? data["重量"] ?? "";
   const volW  = data["容積重量"] ?? "";
   const realWText = realW ? fmtKg(realW) : "－";
   const volWText  = volW ? fmtKg(volW) : "－";
-  basicWeight.textContent = `${realWText}（${volWText}）`;
+  card.querySelector(".js-weight").textContent = `${realWText}（${volWText}）`;
 
-  renderWarningTags(basicWarning, data["注意事項（警告系）"]);
+  card.querySelector(".js-material").textContent = data["材質"] || "－";
+  card.querySelector(".js-catP").textContent = data["親カテゴリ"] || "";
+  card.querySelector(".js-catC").textContent = data["サブカテゴリ"] || "";
+  renderWarningTags(card.querySelector(".js-warning"), data["注意事項（警告系）"]);
 
+  // default price
+  const sellPriceInput = card.querySelector(".js-sellPrice");
   const defaultPrice = data["販売額（ドル）"];
-  if (defaultPrice && !sellPriceInput.value) {
+  if (defaultPrice) {
     const num = pickNumberLike(defaultPrice);
     if (num) sellPriceInput.value = num;
   }
 
-  summaryCard.style.display = "grid";
-  placeholderCard.style.display = "none";
-  detailCard.style.display = "block";
+  // cart
+  const qtySelect = card.querySelector(".js-qtySelect");
+  card.querySelector(".js-addCart").addEventListener("click", () => {
+    const qty = Number(qtySelect.value || 1);
+    const price = Number(sellPriceInput.value || 0);
+    if (!price || price <= 0) return alert("販売価格（$）を入力してください");
 
-  applyMetricsLayout(data);
+    const payload = { asin, qty, price, total: +(qty * price).toFixed(2) };
+    console.log("ADD_TO_CART", payload);
+    alert(`カートに追加しました\nASIN: ${asin}\n数量: ${qty}\n価格: $${price}\n小計: $${payload.total}`);
+  });
 
-  setGraphMode("MES");
-  renderChart(asin);
-}
+  // center metrics + table
+  const centerBox = card.querySelector(".js-center");
+  buildCenterMetrics(centerBox, data);
 
-function clearView(msg){
-  summaryCard.style.display = "none";
-  detailCard.style.display = "none";
-  placeholderCard.style.display = "block";
-  if(msg){
-    const body = placeholderCard.querySelector(".card-body");
-    if(body) body.textContent = msg;
+  const state = { cols: buildTableColumnsFromZones(), dragId: null };
+  const tableEl = card.querySelector(".js-detailTable");
+  buildDetailTable(tableEl, data, state);
+
+  // chart
+  const canvas = card.querySelector(".js-chart");
+  const chart = renderChart(canvas, asin);
+
+  const chkDS = card.querySelector(".js-chkDS");
+  const chkSP = card.querySelector(".js-chkSP");
+  chkDS.addEventListener("change", () => updateChartVisibility(chart, chkDS.checked, chkSP.checked));
+  chkSP.addEventListener("change", () => updateChartVisibility(chart, chkDS.checked, chkSP.checked));
+  updateChartVisibility(chart, true, false);
+
+  // keepa switch
+  const btnMes = card.querySelector(".js-btnMes");
+  const btnKeepa = card.querySelector(".js-btnKeepa");
+  const mesWrap = card.querySelector(".js-mesWrap");
+  const keepaWrap = card.querySelector(".js-keepaWrap");
+  const keepaFrame = card.querySelector(".js-keepaFrame");
+  const graphOptions = card.querySelector(".js-graphOptions");
+
+  function setMode(mode){
+    if(mode === "MES"){
+      btnMes.classList.add("active");
+      btnKeepa.classList.remove("active");
+      graphOptions.style.display = "flex";
+      mesWrap.style.display = "block";
+      keepaWrap.style.display = "none";
+    }else{
+      btnKeepa.classList.add("active");
+      btnMes.classList.remove("active");
+      graphOptions.style.display = "none";
+      mesWrap.style.display = "none";
+      keepaWrap.style.display = "flex";
+      keepaFrame.src = `https://keepa.com/#!product/1-${asin}`;
+    }
   }
+  btnMes.addEventListener("click", () => setMode("MES"));
+  btnKeepa.addEventListener("click", () => setMode("KEEPA"));
+
+  // store
+  cardState.set(asin, { el: card, data, chart, state, centerBox, tableEl });
+
+  return card;
 }
 
-function loadAsin(){
+/* 指標配置変更を全カードへ反映 */
+function rerenderAllCards(){
+  cardState.forEach((v) => {
+    buildCenterMetrics(v.centerBox, v.data);
+    v.state.cols = buildTableColumnsFromZones();
+    buildDetailTable(v.tableEl, v.data, v.state);
+  });
+}
+
+/* =========================
+   Add/clear
+========================= */
+function addAsin(){
   const asin = asinInput.value.trim().toUpperCase();
-  if(!asin) return clearView("ASINを入力してください。");
+  if(!asin) return alert("ASINを入力してください");
+
   const data = ASIN_DATA?.[asin];
-  if(!data) return clearView(`ASIN「${asin}」のデータがありません。上のラベルから登録済みASINを確認してください。`);
-  renderDetail(asin, data);
+  if(!data) return alert(`ASIN「${asin}」のデータがありません`);
+
+  // 既に表示中ならスクロールだけ
+  if(cardState.has(asin)){
+    const el = cardState.get(asin).el;
+    el.scrollIntoView({ behavior:"smooth", block:"start" });
+    return;
+  }
+
+  const card = createProductCard(asin, data);
+  itemsContainer.appendChild(card);
+
+  emptyState.style.display = "none";
+  card.scrollIntoView({ behavior:"smooth", block:"start" });
 }
 
-loadBtn.addEventListener("click", loadAsin);
-asinInput.addEventListener("keydown", (e) => {
-  if(e.key === "Enter"){ e.preventDefault(); loadAsin(); }
-});
+function clearAll(){
+  itemsContainer.innerHTML = "";
+  cardState.forEach(v => { try{ v.chart.destroy(); }catch{} });
+  cardState.clear();
+  emptyState.style.display = "block";
+}
 
-/* Catalog */
+addBtn.addEventListener("click", addAsin);
+asinInput.addEventListener("keydown", (e) => {
+  if(e.key === "Enter"){ e.preventDefault(); addAsin(); }
+});
+clearBtn.addEventListener("click", clearAll);
+
+/* =========================
+   Catalog
+========================= */
 function initCatalog(){
   const asins = Object.keys(ASIN_DATA || {});
   headerStatus.textContent = `登録ASIN数：${asins.length}件`;
@@ -630,19 +700,20 @@ function initCatalog(){
     pill.textContent = a;
     pill.addEventListener("click", () => {
       asinInput.value = a;
-      loadAsin();
+      addAsin();
     });
     asinCatalog.appendChild(pill);
   });
 }
 
-/* Init */
+/* =========================
+   Init
+========================= */
 document.addEventListener("DOMContentLoaded", () => {
   attachZoneDrop(metricsPoolZone, "pool");
   attachZoneDrop(metricsCenterZone, "center");
   attachZoneDrop(metricsTableZone, "table");
   attachZoneDrop(metricsHiddenZone, "hidden");
-
   renderAllZones();
   initCatalog();
 });
