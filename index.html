@@ -25,32 +25,39 @@
       <label for="asinInput">ASIN：</label>
       <input id="asinInput" type="text" placeholder="例）B0A0000001" />
       <button id="loadBtn">表示</button>
-      <button id="openMetricsConfigBtn" class="ghost-btn">指標カスタマイズ</button>
     </div>
 
-    <!-- 指標カスタマイズパネル -->
-    <div id="metricsConfigPanel" class="metrics-config" style="display:none;">
-      <div class="metrics-config-header">
-        <span>指標の表示場所をカスタマイズ</span>
-        <button id="metricsConfigClose" title="閉じる">×</button>
+    <!-- 指標プール（常時表示） -->
+    <div class="metrics-bar">
+      <div class="metrics-bar-head">
+        <div class="metrics-bar-title">指標プール（ドラッグして配置）</div>
+        <div class="metrics-bar-help">プール → 真ん中枠 / 下段テーブル / 非表示 に移動できます。枠内でも並び替えできます。</div>
       </div>
-      <div class="metrics-config-body">
-        <div class="metrics-zone" data-zone="center">
+
+      <div class="metrics-row">
+        <div class="metrics-zone">
+          <div class="metrics-zone-title">プール</div>
+          <div class="metrics-zone-list" id="metricsPoolZone"></div>
+        </div>
+
+        <div class="metrics-zone">
           <div class="metrics-zone-title">真ん中の枠</div>
           <div class="metrics-zone-list" id="metricsCenterZone"></div>
         </div>
-        <div class="metrics-zone" data-zone="table">
+
+        <div class="metrics-zone">
           <div class="metrics-zone-title">下の段テーブル</div>
           <div class="metrics-zone-list" id="metricsTableZone"></div>
         </div>
-        <div class="metrics-zone" data-zone="hidden">
+
+        <div class="metrics-zone">
           <div class="metrics-zone-title">非表示</div>
           <div class="metrics-zone-list" id="metricsHiddenZone"></div>
         </div>
       </div>
-      <div class="metrics-config-footer">
-        <span>項目をドラッグ＆ドロップで移動すると、即座に反映されます。</span>
-        <button id="metricsResetBtn">初期状態に戻す</button>
+
+      <div class="metrics-bar-foot">
+        <button id="metricsResetBtn">初期配置に戻す</button>
       </div>
     </div>
 
@@ -77,6 +84,7 @@
                   </select>
                 </div>
               </div>
+
               <div class="summary-basic">
                 <div id="basicTitle" class="summary-title"></div>
 
@@ -134,15 +142,16 @@
                   </div>
                 </div>
 
-                <div class="summary-basic-row" style="margin-top:4px;">
+                <!-- ✅ 注意事項：横並び（ラベルの右横にタグ） -->
+                <div class="summary-basic-row warning-inline">
                   <div class="summary-basic-label">注意事項</div>
+                  <div id="basicWarning" class="summary-basic-value"></div>
                 </div>
-                <div id="basicWarning" style="font-size:10px;"></div>
               </div>
             </div>
           </div>
 
-          <!-- 中央：カスタマイズ可能な主要指標 -->
+          <!-- 中央：主要指標（プールから配置） -->
           <div class="summary-column">
             <div class="summary-center">
               <div class="center-title">主要指標</div>
