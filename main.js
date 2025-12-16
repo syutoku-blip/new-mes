@@ -10,6 +10,7 @@
    - 日本最安値：ホバーで Amazon/Yahoo/楽天 内訳ツールチップ
    - 重量：データ側「重量kg」で取得、表示「重量（容積重量）」
    - 指標プールに「容積重量」は出さない（左枠にあるため）
+   - ★起動処理：DOMContentLoaded済みでも確実に初期化（ASIN一覧復活）
 ========================================================= */
 
 /* =========================
@@ -90,10 +91,6 @@ function toSortableNumber(value){
   return Number.isFinite(n) ? n : NaN;
 }
 
-function escapeAttr(s){
-  return String(s ?? "").replace(/"/g, "&quot;");
-}
-
 /* =========================
    Cart summary
 ========================= */
@@ -133,10 +130,6 @@ function renderWarningTags(container, rawText) {
   pushIfIncluded("輸出不可", "warning-export-ban");
   pushIfIncluded("知財", "warning-ip");
   pushIfIncluded("大型", "warning-large");
-  // 他の注意事項はCSS側が無い場合もあるので、未定義はまとめて表示
-  const known = ["輸出不可","知財","大型","出荷禁止","承認要","バリエーション"];
-  const unknowns = known.filter(k => text.includes(k) === false);
-  // unknowns使わない（あえて）
 
   const wrap = document.createElement("div");
   wrap.className = "warning-tags";
@@ -202,7 +195,6 @@ function renderChart(canvasEl, asin) {
   const series = getDemandSupplySeries(asin);
   const ctx = canvasEl.getContext("2d");
 
-  // Chart.js v4: color指定はOK（ユーザー指定なしだが、既存デザイン維持のため固定）
   return new Chart(ctx, {
     type: "line",
     data: {
@@ -239,12 +231,8 @@ function renderChart(canvasEl, asin) {
   });
 }
 
-/* チェックボックス表示切替
-   - 《需要＆供給》: ランキング + セラー
-   - 《供給＆価格》: セラー + 価格
-*/
+/* チェックボックス表示切替 */
 function updateChartVisibility(chart, demandSupplyOn, supplyPriceOn) {
-  // デフォルト（両方OFF）は需要&供給相当で表示
   if(!demandSupplyOn && !supplyPriceOn) demandSupplyOn = true;
 
   const showRank = demandSupplyOn;
@@ -264,12 +252,8 @@ const METRICS_STORAGE_KEY = "MES_AI_METRICS_ZONES_V8";
 const SORT_STORAGE_KEY = "MES_AI_SORT_RULES_V1";
 const METRICS_COLLAPSE_KEY = "MES_AI_METRICS_COLLAPSED_V1";
 
-/* 折りたたみ状態 */
 let METRICS_COLLAPSED = localStorage.getItem(METRICS_COLLAPSE_KEY) === "1";
 
-/* 指標定義
-   ※「容積重量」は左枠にあるので、プール候補から除外
-*/
 const METRICS_ALL = [
   { id: "FBA最安値", label: "FBA最安値", sourceKey: "FBA最安値" },
   { id: "過去3月FBA最安値", label: "過去3ヶ月FBA最安値", sourceKey: "過去3月FBA最安値" },
@@ -336,7 +320,6 @@ function sanitizeZones(zones){
   const used = new Set([...z.pool, ...z.center, ...z.table, ...z.hidden]);
   allIds.forEach(id => { if (!used.has(id)) z.pool.push(id); });
 
-  // 重複排除
   const seen = new Set();
   ["pool","center","table","hidden"].forEach(k => {
     z[k] = z[k].filter(id => {
@@ -369,7 +352,6 @@ function removeFromAllZones(id){
   });
 }
 
-/* drop位置算出（末尾固定にならない） */
 function getBeforeIdInZone(containerEl, clientX, clientY){
   const pills = [...containerEl.querySelectorAll(".metric-pill")];
   if(!pills.length) return null;
@@ -414,12 +396,9 @@ function moveMetric(id, toZone, beforeId){
   saveZones();
   renderAllZones();
   rerenderAllCards();
-  renderSortUI(); // 真ん中枠が変わると候補が変わる
+  renderSortUI();
 }
 
-/* =========================
-   Metrics UI render / DnD wiring
-========================= */
 function renderZone(el, zoneName){
   el.innerHTML = "";
   ZONES[zoneName].forEach(id => {
@@ -478,7 +457,7 @@ metricsResetBtn?.addEventListener("click", () => {
 /* =========================
    Sort (multi rules on CENTER metrics)
 ========================= */
-let sortRules = []; // { metricId, dir: "asc"|"desc" }
+let sortRules = [];
 
 function saveSortRules(){
   localStorage.setItem(SORT_STORAGE_KEY, JSON.stringify(sortRules));
@@ -515,7 +494,6 @@ function renderSortUI(){
     return;
   }
 
-  // 初回は1ルールを用意
   if (!sortRules.length){
     sortRules = [{ metricId: options[0].id, dir: "desc" }];
     saveSortRules();
@@ -642,7 +620,7 @@ function buildCenterMetrics(container, data){
     const m = metricById(id);
     if(!m) return;
 
-    const row = document.createElement("div");
+    const row = document.createElement("center-row");
     row.className = "center-row";
 
     const l = document.createElement("div");
@@ -654,7 +632,6 @@ function buildCenterMetrics(container, data){
 
     const raw = (data && data[m.sourceKey] != null && data[m.sourceKey] !== "") ? data[m.sourceKey] : "－";
 
-    // 日本最安値は内訳ツールチップ
     if (m.id === "日本最安値" && raw !== "－") {
       const a = data["日本最安値_Amazon"] ?? "－";
       const y = data["日本最安値_yahoo"] ?? "－";
@@ -718,7 +695,6 @@ function buildDetailTable(tableEl, data, state){
     const value = data[col.id];
     const raw = (value === undefined || value === "" || value === null) ? "－" : value;
 
-    // 下段テーブルでも日本最安値をツールチップ対応
     if(col.metricId === "日本最安値" && raw !== "－"){
       const a = data["日本最安値_Amazon"] ?? "－";
       const y = data["日本最安値_yahoo"] ?? "－";
@@ -788,7 +764,7 @@ function createProductCard(asin, data){
           </div>
 
           <div class="summary-basic">
-            <div class="summary-title js-title" style="font-size:13px;font-weight:900;margin-bottom:8px;"></div>
+            <div class="summary-title js-title"></div>
 
             <div class="basic-row"><div class="basic-label">ブランド</div><div class="basic-value js-brand"></div></div>
             <div class="basic-row"><div class="basic-label">評価</div><div class="basic-value js-rating"></div></div>
@@ -864,14 +840,12 @@ function createProductCard(asin, data){
     </div>
   `;
 
-  /* remove card (行削除) */
+  /* remove card */
   card.querySelector(".js-removeCard").addEventListener("click", () => {
-    // カートからも外す
     if(cart.has(asin)){
       cart.delete(asin);
       updateCartSummary();
     }
-    // chart destroy
     const st = cardState.get(asin);
     try{ st?.chart?.destroy(); }catch{}
     cardState.delete(asin);
@@ -882,7 +856,7 @@ function createProductCard(asin, data){
     }
   });
 
-  /* ===== Base fill ===== */
+  /* base fill */
   const img = card.querySelector(".js-prodImage");
   img.src = data["商品画像"] || "";
   img.onerror = () => { img.style.display = "none"; };
@@ -900,7 +874,7 @@ function createProductCard(asin, data){
   card.querySelector(".js-sku").textContent = data["SKU"] || "－";
   card.querySelector(".js-size").textContent = data["サイズ"] || "－";
 
-  /* ★重量：データ側は「重量kg」 */
+  // ★重量：データ側は「重量kg」
   const realW = data["重量kg"] ?? data["重量（kg）"] ?? data["重量（kg)"] ?? data["重量"] ?? "";
   const volW  = data["容積重量"] ?? "";
   const realWText = realW ? fmtKg(realW) : "－";
@@ -912,7 +886,7 @@ function createProductCard(asin, data){
   card.querySelector(".js-catC").textContent = data["サブカテゴリ"] || "－";
   renderWarningTags(card.querySelector(".js-warning"), data["注意事項（警告系）"]);
 
-  /* ===== default price & cost ===== */
+  /* default price & cost */
   const sellPriceInput = card.querySelector(".js-sellPrice");
   const costJpyInput = card.querySelector(".js-costJpy");
 
@@ -925,7 +899,7 @@ function createProductCard(asin, data){
     if (c) costJpyInput.value = c;
   }
 
-  /* ===== cart ===== */
+  /* cart */
   const qtySelect = card.querySelector(".js-qtySelect");
   card.querySelector(".js-addCart").addEventListener("click", () => {
     const qty = Math.max(1, Number(qtySelect.value || 1));
@@ -953,13 +927,10 @@ function createProductCard(asin, data){
 
   const chkDS = card.querySelector(".js-chkDS");
   const chkSP = card.querySelector(".js-chkSP");
-
   const refreshVis = () => updateChartVisibility(chart, chkDS.checked, chkSP.checked);
-  chkDS.addEventListener("change", () => {
-    // 片方ONにしたらもう片方OFFにしても良いが、要件では独立でOK
-    refreshVis();
-  });
-  chkSP.addEventListener("change", () => refreshVis());
+
+  chkDS.addEventListener("change", refreshVis);
+  chkSP.addEventListener("change", refreshVis);
   updateChartVisibility(chart, true, false);
 
   /* keepa switch */
@@ -982,7 +953,7 @@ function createProductCard(asin, data){
       btnMes.classList.remove("active");
       graphOptions.style.display = "none";
       mesWrap.style.display = "none";
-      keepaWrap.style.display = "flex";
+      keepaWrap.style.display = "block";
       keepaFrame.src = `https://keepa.com/#!product/1-${asin}`;
     }
   }
@@ -1015,7 +986,6 @@ function addAsin(asin){
   emptyState.style.display = "none";
   card.scrollIntoView({ behavior:"smooth", block:"start" });
 
-  // 追加したら現在のソート条件があれば即適用しても良い（好み）
   if(sortRules.length) applyCardSort();
 }
 
@@ -1038,17 +1008,20 @@ clearCartBtn?.addEventListener("click", () => {
 ========================= */
 function initCatalog(){
   const asins = Object.keys(window.ASIN_DATA || {});
-  headerStatus.textContent = `登録ASIN数：${asins.length}件`;
+  if(headerStatus) headerStatus.textContent = `登録ASIN数：${asins.length}件`;
 
+  if(!asinCatalog) return;
   asinCatalog.innerHTML = "";
+
   if(!asins.length) return;
 
-  // ラベル
   const label = document.createElement("span");
   label.textContent = "データがあるASIN：";
   label.style.background = "transparent";
   label.style.cursor = "default";
   label.style.fontWeight = "900";
+  label.style.border = "none";
+  label.style.padding = "0";
   asinCatalog.appendChild(label);
 
   asins.forEach(a => {
@@ -1081,9 +1054,9 @@ function initCollapse(){
 }
 
 /* =========================
-   Init
+   Boot (★ここが重要：ASINが消える問題の根本修正)
 ========================= */
-document.addEventListener("DOMContentLoaded", () => {
+function bootApp(){
   // DnD attach
   attachZoneDrop(metricsPoolZone, "pool");
   attachZoneDrop(metricsCenterZone, "center");
@@ -1096,6 +1069,22 @@ document.addEventListener("DOMContentLoaded", () => {
   renderSortUI();
 
   initCollapse();
-  initCatalog();
+  initCatalog();        // ← ASINクリック場所はここで生成
   updateCartSummary();
-});
+
+  // buttons not wired earlier
+  metricsResetBtn?.addEventListener("click", () => {
+    ZONES = structuredCloneSafe(DEFAULT_ZONES);
+    saveZones();
+    renderAllZones();
+    rerenderAllCards();
+    renderSortUI();
+  });
+}
+
+// DOMContentLoadedが既に終わっている環境でも確実に起動させる
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", bootApp);
+} else {
+  bootApp();
+}
