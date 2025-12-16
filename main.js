@@ -1,3 +1,17 @@
+/* =========================================================
+   MES-AI-A main.js (FULL)
+   - ASINクリックでカード追加（複数可）
+   - 指標プール：ドラッグ&ドロップ（挿入位置対応）
+   - 真ん中枠 / 下段テーブル：同一指標はどちらか一方のみ
+   - プール折りたたみ/展開（localStorage）
+   - ソート（真ん中枠の指標から複数条件）
+   - カート：数量/販売価格$/仕入れ額¥ → 集計（sticky表示はCSS）
+   - グラフ：MES-AI-A(ランキング/セラー数/価格) + Keepa切替
+   - 日本最安値：ホバーで Amazon/Yahoo/楽天 内訳ツールチップ
+   - 重量：データ側「重量kg」で取得、表示「重量（容積重量）」
+   - 指標プールに「容積重量」は出さない（左枠にあるため）
+========================================================= */
+
 /* =========================
    DOM
 ========================= */
@@ -6,13 +20,22 @@ const asinCatalog = document.getElementById("asinCatalog");
 const emptyState = document.getElementById("emptyState");
 const itemsContainer = document.getElementById("itemsContainer");
 
+const metricsBarEl = document.querySelector(".metrics-bar");
+const metricsCollapseBtn = document.getElementById("metricsCollapseBtn");
+
 const metricsPoolZone = document.getElementById("metricsPoolZone");
 const metricsCenterZone = document.getElementById("metricsCenterZone");
 const metricsTableZone = document.getElementById("metricsTableZone");
 const metricsHiddenZone = document.getElementById("metricsHiddenZone");
+
 const metricsResetBtn = document.getElementById("metricsResetBtn");
 const clearCardsBtn = document.getElementById("clearCardsBtn");
 const clearCartBtn = document.getElementById("clearCartBtn");
+
+const sortControls = document.getElementById("sortControls");
+const addSortRuleBtn = document.getElementById("addSortRuleBtn");
+const applySortBtn = document.getElementById("applySortBtn");
+const clearSortBtn = document.getElementById("clearSortBtn");
 
 /* cart summary */
 const cartTotalCostEl = document.getElementById("cartTotalCost");
@@ -26,7 +49,7 @@ const cartItemCountEl = document.getElementById("cartItemCount");
 ========================= */
 const cardState = new Map(); // asin -> { el, data, chart, state, centerBox, tableEl }
 const cart = new Map();      // asin -> { qty, sellUSD, costJPY }
-const FX_USDJPY = 150;       // 固定為替
+const FX_USDJPY = 150;       // 固定（必要なら将来UI化）
 
 /* =========================
    Utils
@@ -50,7 +73,25 @@ function createPRNG(seedStr) {
 function fmtKg(v){
   const s = String(v ?? "").trim();
   if(!s) return "";
-  return s.includes("kg") ? s : `${s}kg`;
+  return s.toLowerCase().includes("kg") ? s : `${s}kg`;
+}
+
+/* "26%" "6,200円" "$39.99" "+0.5" "1.20kg" -> number */
+function toSortableNumber(value){
+  if (value == null) return NaN;
+  const s = String(value).trim();
+  if (!s) return NaN;
+
+  const cleaned = s
+    .replace(/[,￥円$％%]/g, "")
+    .replace(/kg/gi, "")
+    .replace(/[^\d.+-]/g, "");
+  const n = Number(cleaned);
+  return Number.isFinite(n) ? n : NaN;
+}
+
+function escapeAttr(s){
+  return String(s ?? "").replace(/"/g, "&quot;");
 }
 
 /* =========================
@@ -74,8 +115,8 @@ function updateCartSummary(){
   cartTotalCostEl.textContent = yen(totalCost);
   cartTotalRevenueEl.textContent = yen(totalRevenue);
   cartTotalProfitEl.textContent = yen(profit);
-  cartAsinCountEl.textContent = `${asinCount}個`;
-  cartItemCountEl.textContent = `${itemCount}個`;
+  cartAsinCountEl.textContent = `${asinCount}`;
+  cartItemCountEl.textContent = `${itemCount}`;
 }
 
 /* =========================
@@ -84,29 +125,25 @@ function updateCartSummary(){
 function renderWarningTags(container, rawText) {
   container.innerHTML = "";
   const text = (rawText || "").trim();
-  if (!text) {
-    container.textContent = "－";
-    return;
-  }
+  if (!text) { container.textContent = "－"; return; }
 
   const tags = [];
-  const pushIfIncluded = (keyword, cls) => {
-    if (text.includes(keyword)) tags.push({ label: keyword, cls });
-  };
+  const pushIfIncluded = (keyword, cls) => { if (text.includes(keyword)) tags.push({ label: keyword, cls }); };
 
   pushIfIncluded("輸出不可", "warning-export-ban");
   pushIfIncluded("知財", "warning-ip");
   pushIfIncluded("大型", "warning-large");
-  pushIfIncluded("出荷禁止", "warning-ship-ban");
-  pushIfIncluded("承認要", "warning-approval");
-  pushIfIncluded("バリエーション", "warning-variation");
+  // 他の注意事項はCSS側が無い場合もあるので、未定義はまとめて表示
+  const known = ["輸出不可","知財","大型","出荷禁止","承認要","バリエーション"];
+  const unknowns = known.filter(k => text.includes(k) === false);
+  // unknowns使わない（あえて）
 
   const wrap = document.createElement("div");
   wrap.className = "warning-tags";
 
   if (!tags.length) {
     const span = document.createElement("span");
-    span.className = "warning-tag warning-plain";
+    span.className = "warning-tag warning-large";
     span.textContent = text;
     wrap.appendChild(span);
   } else {
@@ -122,7 +159,7 @@ function renderWarningTags(container, rawText) {
 }
 
 /* =========================
-   Chart
+   Chart (MES-AI-A)
 ========================= */
 function getDemandSupplySeries(asin) {
   const rand = createPRNG(asin);
@@ -165,14 +202,15 @@ function renderChart(canvasEl, asin) {
   const series = getDemandSupplySeries(asin);
   const ctx = canvasEl.getContext("2d");
 
+  // Chart.js v4: color指定はOK（ユーザー指定なしだが、既存デザイン維持のため固定）
   return new Chart(ctx, {
     type: "line",
     data: {
       labels: series.labels,
       datasets: [
-        { label: "ランキング（小さいほど上位）", data: series.ranking, borderWidth: 3, pointRadius: 0, tension: 0.25, borderColor: "#60a5fa", yAxisID: "yRank" },
-        { label: "セラー数", data: series.sellers, borderWidth: 3, pointRadius: 0, tension: 0.25, borderColor: "#22c55e", yAxisID: "ySeller" },
-        { label: "価格（USD）", data: series.price, borderWidth: 3, pointRadius: 0, tension: 0.25, borderColor: "#f97316", yAxisID: "yPrice" }
+        { label: "ランキング", data: series.ranking, borderWidth: 4, pointRadius: 0, tension: 0.25, borderColor: "#60a5fa", yAxisID: "yRank" },
+        { label: "セラー数", data: series.sellers, borderWidth: 4, pointRadius: 0, tension: 0.25, borderColor: "#22c55e", yAxisID: "ySeller" },
+        { label: "価格(USD)", data: series.price, borderWidth: 4, pointRadius: 0, tension: 0.25, borderColor: "#f97316", yAxisID: "yPrice" }
       ]
     },
     options: {
@@ -186,7 +224,7 @@ function renderChart(canvasEl, asin) {
           bodyFont: { size: 10 },
           callbacks: {
             label: (ctx) => ctx.dataset.yAxisID === "yPrice"
-              ? `${ctx.dataset.label}: $${ctx.parsed.y.toFixed(2)}`
+              ? `${ctx.dataset.label}: $${Number(ctx.parsed.y).toFixed(2)}`
               : `${ctx.dataset.label}: ${ctx.parsed.y}`
           }
         }
@@ -201,10 +239,17 @@ function renderChart(canvasEl, asin) {
   });
 }
 
-function updateChartVisibility(chart, demandOn, supplyOn) {
-  const showRank = demandOn || (!demandOn && !supplyOn);
-  const showSeller = demandOn || supplyOn;
-  const showPrice = supplyOn;
+/* チェックボックス表示切替
+   - 《需要＆供給》: ランキング + セラー
+   - 《供給＆価格》: セラー + 価格
+*/
+function updateChartVisibility(chart, demandSupplyOn, supplyPriceOn) {
+  // デフォルト（両方OFF）は需要&供給相当で表示
+  if(!demandSupplyOn && !supplyPriceOn) demandSupplyOn = true;
+
+  const showRank = demandSupplyOn;
+  const showSeller = demandSupplyOn || supplyPriceOn;
+  const showPrice = supplyPriceOn;
 
   chart.data.datasets[0].hidden = !showRank;
   chart.data.datasets[1].hidden = !showSeller;
@@ -213,17 +258,26 @@ function updateChartVisibility(chart, demandOn, supplyOn) {
 }
 
 /* =========================
-   Metrics pool
+   Metrics pool (Drag & Drop)
 ========================= */
-const METRICS_STORAGE_KEY = "MES_AI_METRICS_ZONES_V7";
+const METRICS_STORAGE_KEY = "MES_AI_METRICS_ZONES_V8";
+const SORT_STORAGE_KEY = "MES_AI_SORT_RULES_V1";
+const METRICS_COLLAPSE_KEY = "MES_AI_METRICS_COLLAPSED_V1";
 
-/* ★容積重量はプールに不要 → 候補からも削除 */
+/* 折りたたみ状態 */
+let METRICS_COLLAPSED = localStorage.getItem(METRICS_COLLAPSE_KEY) === "1";
+
+/* 指標定義
+   ※「容積重量」は左枠にあるので、プール候補から除外
+*/
 const METRICS_ALL = [
   { id: "FBA最安値", label: "FBA最安値", sourceKey: "FBA最安値" },
   { id: "過去3月FBA最安値", label: "過去3ヶ月FBA最安値", sourceKey: "過去3月FBA最安値" },
   { id: "粗利益率予測", label: "粗利益率予測", sourceKey: "粗利益率予測" },
-  { id: "粗利益予測", label: "粗利益予測（1個あたり）", sourceKey: "粗利益予測" },
+  { id: "粗利益予測", label: "粗利益予測（1個）", sourceKey: "粗利益予測" },
   { id: "予測30日販売数", label: "予測30日販売数", sourceKey: "予測30日販売数" },
+
+  { id: "日本最安値", label: "日本最安値", sourceKey: "日本最安値" },
 
   { id: "30日販売数", label: "30日販売数（実績）", sourceKey: "30日販売数" },
   { id: "90日販売数", label: "90日販売数（実績）", sourceKey: "90日販売数" },
@@ -253,6 +307,7 @@ const METRICS_ALL = [
 
 const DEFAULT_ZONES = {
   pool: [
+    "日本最安値",
     "90日販売数","180日販売数",
     "複数在庫指数45日分","複数在庫指数60日分",
     "ライバル偏差1","ライバル偏差2","ライバル増加率",
@@ -281,6 +336,7 @@ function sanitizeZones(zones){
   const used = new Set([...z.pool, ...z.center, ...z.table, ...z.hidden]);
   allIds.forEach(id => { if (!used.has(id)) z.pool.push(id); });
 
+  // 重複排除
   const seen = new Set();
   ["pool","center","table","hidden"].forEach(k => {
     z[k] = z[k].filter(id => {
@@ -313,7 +369,7 @@ function removeFromAllZones(id){
   });
 }
 
-/* drop位置を算出して挿入（末尾固定にならない） */
+/* drop位置算出（末尾固定にならない） */
 function getBeforeIdInZone(containerEl, clientX, clientY){
   const pills = [...containerEl.querySelectorAll(".metric-pill")];
   if(!pills.length) return null;
@@ -358,8 +414,12 @@ function moveMetric(id, toZone, beforeId){
   saveZones();
   renderAllZones();
   rerenderAllCards();
+  renderSortUI(); // 真ん中枠が変わると候補が変わる
 }
 
+/* =========================
+   Metrics UI render / DnD wiring
+========================= */
 function renderZone(el, zoneName){
   el.innerHTML = "";
   ZONES[zoneName].forEach(id => {
@@ -407,11 +467,159 @@ function renderAllZones(){
   renderZone(metricsHiddenZone, "hidden");
 }
 
-metricsResetBtn.addEventListener("click", () => {
+metricsResetBtn?.addEventListener("click", () => {
   ZONES = structuredCloneSafe(DEFAULT_ZONES);
   saveZones();
   renderAllZones();
   rerenderAllCards();
+  renderSortUI();
+});
+
+/* =========================
+   Sort (multi rules on CENTER metrics)
+========================= */
+let sortRules = []; // { metricId, dir: "asc"|"desc" }
+
+function saveSortRules(){
+  localStorage.setItem(SORT_STORAGE_KEY, JSON.stringify(sortRules));
+}
+function loadSortRules(){
+  try{
+    const raw = localStorage.getItem(SORT_STORAGE_KEY);
+    sortRules = raw ? JSON.parse(raw) : [];
+    if(!Array.isArray(sortRules)) sortRules = [];
+  }catch{
+    sortRules = [];
+  }
+}
+
+function getCenterMetricOptions(){
+  return ZONES.center
+    .map(id => metricById(id))
+    .filter(Boolean)
+    .map(m => ({ id: m.id, label: m.label, sourceKey: m.sourceKey }));
+}
+
+function renderSortUI(){
+  if(!sortControls) return;
+
+  const options = getCenterMetricOptions();
+  sortControls.innerHTML = "";
+
+  if (!options.length){
+    const div = document.createElement("div");
+    div.style.fontSize = "11px";
+    div.style.color = "#6b7280";
+    div.textContent = "真ん中枠に指標がありません。プールから真ん中枠へドラッグするとソートできます。";
+    sortControls.appendChild(div);
+    return;
+  }
+
+  // 初回は1ルールを用意
+  if (!sortRules.length){
+    sortRules = [{ metricId: options[0].id, dir: "desc" }];
+    saveSortRules();
+  }
+
+  sortRules.forEach((rule, idx) => {
+    const row = document.createElement("div");
+    row.className = "sort-row";
+
+    const sel = document.createElement("select");
+    options.forEach(o => {
+      const op = document.createElement("option");
+      op.value = o.id;
+      op.textContent = o.label;
+      sel.appendChild(op);
+    });
+    sel.value = rule.metricId;
+
+    const dir = document.createElement("select");
+    dir.className = "sort-dir";
+    dir.innerHTML = `
+      <option value="desc">高い順</option>
+      <option value="asc">低い順</option>
+    `;
+    dir.value = rule.dir;
+
+    const del = document.createElement("button");
+    del.type = "button";
+    del.textContent = "削除";
+    del.addEventListener("click", () => {
+      sortRules.splice(idx, 1);
+      saveSortRules();
+      renderSortUI();
+    });
+
+    sel.addEventListener("change", () => {
+      rule.metricId = sel.value;
+      saveSortRules();
+    });
+    dir.addEventListener("change", () => {
+      rule.dir = dir.value;
+      saveSortRules();
+    });
+
+    row.appendChild(sel);
+    row.appendChild(dir);
+    row.appendChild(del);
+    sortControls.appendChild(row);
+  });
+}
+
+function applyCardSort(){
+  if (cardState.size <= 1) return;
+
+  const opts = getCenterMetricOptions();
+  const optById = new Map(opts.map(o => [o.id, o]));
+
+  const rules = sortRules
+    .map(r => ({ ...r, opt: optById.get(r.metricId) }))
+    .filter(r => r.opt);
+
+  if (!rules.length) return;
+
+  const cards = [...cardState.values()];
+
+  cards.sort((A, B) => {
+    for (const r of rules){
+      const aRaw = A.data?.[r.opt.sourceKey];
+      const bRaw = B.data?.[r.opt.sourceKey];
+
+      const a = toSortableNumber(aRaw);
+      const b = toSortableNumber(bRaw);
+
+      const aNan = Number.isNaN(a);
+      const bNan = Number.isNaN(b);
+      if (aNan && bNan) continue;
+      if (aNan) return 1;
+      if (bNan) return -1;
+
+      if (a === b) continue;
+      return (r.dir === "asc") ? (a - b) : (b - a);
+    }
+    return 0;
+  });
+
+  const frag = document.createDocumentFragment();
+  cards.forEach(c => frag.appendChild(c.el));
+  itemsContainer.appendChild(frag);
+}
+
+addSortRuleBtn?.addEventListener("click", () => {
+  const opts = getCenterMetricOptions();
+  if (!opts.length) return alert("真ん中枠に指標を入れてください");
+  sortRules.push({ metricId: opts[0].id, dir: "desc" });
+  saveSortRules();
+  renderSortUI();
+});
+
+applySortBtn?.addEventListener("click", () => applyCardSort());
+
+clearSortBtn?.addEventListener("click", () => {
+  sortRules = [];
+  saveSortRules();
+  renderSortUI();
 });
 
 /* =========================
@@ -424,8 +632,8 @@ function buildCenterMetrics(container, data){
   if(!ids.length){
     const row = document.createElement("div");
     row.className = "center-row";
-    row.innerHTML = `<div class="center-row-label">未設定</div>
-                     <div class="center-row-value" style="font-weight:700;color:#9ca3af;">上のプールからドラッグ</div>`;
+    row.innerHTML = `<div style="color:#6b7280;font-weight:900;">未設定</div>
+                     <div style="color:#9ca3af;font-weight:800;">プールからドラッグ</div>`;
     container.appendChild(row);
     return;
   }
@@ -443,7 +651,23 @@ function buildCenterMetrics(container, data){
 
     const v = document.createElement("div");
     v.className = "center-row-value";
-    v.textContent = (data && data[m.sourceKey] != null && data[m.sourceKey] !== "") ? data[m.sourceKey] : "－";
+
+    const raw = (data && data[m.sourceKey] != null && data[m.sourceKey] !== "") ? data[m.sourceKey] : "－";
+
+    // 日本最安値は内訳ツールチップ
+    if (m.id === "日本最安値" && raw !== "－") {
+      const a = data["日本最安値_Amazon"] ?? "－";
+      const y = data["日本最安値_yahoo"] ?? "－";
+      const r = data["日本最安値_楽天"] ?? "－";
+
+      const span = document.createElement("span");
+      span.className = "has-tip";
+      span.textContent = raw;
+      span.setAttribute("data-tip", `Amazon　${a}\nyahoo　　${y}\n楽天　　　${r}`);
+      v.appendChild(span);
+    } else {
+      v.textContent = raw;
+    }
 
     row.appendChild(l);
     row.appendChild(v);
@@ -455,7 +679,7 @@ function buildTableColumnsFromZones(){
   return ZONES.table
     .map(metricId => metricById(metricId))
     .filter(Boolean)
-    .map(m => ({ id: m.sourceKey, label: m.label }));
+    .map(m => ({ id: m.sourceKey, label: m.label, metricId: m.id }));
 }
 
 function buildDetailTable(tableEl, data, state){
@@ -492,7 +716,23 @@ function buildDetailTable(tableEl, data, state){
   state.cols.forEach(col => {
     const td = document.createElement("td");
     const value = data[col.id];
-    td.textContent = (value === undefined || value === "" || value === null) ? "－" : value;
+    const raw = (value === undefined || value === "" || value === null) ? "－" : value;
+
+    // 下段テーブルでも日本最安値をツールチップ対応
+    if(col.metricId === "日本最安値" && raw !== "－"){
+      const a = data["日本最安値_Amazon"] ?? "－";
+      const y = data["日本最安値_yahoo"] ?? "－";
+      const r = data["日本最安値_楽天"] ?? "－";
+
+      const span = document.createElement("span");
+      span.className = "has-tip";
+      span.textContent = raw;
+      span.setAttribute("data-tip", `Amazon　${a}\nyahoo　　${y}\n楽天　　　${r}`);
+      td.appendChild(span);
+    }else{
+      td.textContent = raw;
+    }
+
     bodyRow.appendChild(td);
   });
 }
@@ -510,11 +750,17 @@ function rerenderAllCards(){
 ========================= */
 function createProductCard(asin, data){
   const card = document.createElement("section");
-  card.className = "product-card";
+  card.className = "product-card card";
   card.dataset.asin = asin;
 
   card.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div class="card-title">ASIN: ${asin}</div>
+      <button class="ghost-btn js-removeCard" type="button">この行を削除</button>
+    </div>
+
     <div class="summary-row">
+      <!-- LEFT -->
       <div class="summary-column">
         <div class="summary-left">
           <div class="summary-image-box">
@@ -542,7 +788,7 @@ function createProductCard(asin, data){
           </div>
 
           <div class="summary-basic">
-            <div class="summary-title js-title"></div>
+            <div class="summary-title js-title" style="font-size:13px;font-weight:900;margin-bottom:8px;"></div>
 
             <div class="basic-row"><div class="basic-label">ブランド</div><div class="basic-value js-brand"></div></div>
             <div class="basic-row"><div class="basic-label">評価</div><div class="basic-value js-rating"></div></div>
@@ -557,7 +803,7 @@ function createProductCard(asin, data){
               <div class="basic-label">カテゴリ</div>
               <div class="basic-value"><span class="js-catP"></span> / <span class="js-catC"></span></div>
             </div>
-            <div class="basic-row warning-inline">
+            <div class="basic-row">
               <div class="basic-label">注意事項</div>
               <div class="basic-value js-warning"></div>
             </div>
@@ -565,19 +811,21 @@ function createProductCard(asin, data){
         </div>
       </div>
 
+      <!-- CENTER -->
       <div class="summary-column">
-        <div class="center-title">主要指標</div>
+        <div style="font-size:12px;font-weight:900;margin-bottom:6px;">主要指標</div>
         <div class="js-center"></div>
-        <div class="center-note" style="margin-top:8px;font-size:10px;color:#92400e;">
+        <div style="margin-top:8px;font-size:10px;color:#6b7280;font-weight:800;">
           ※ 値はダミーデータ（実運用はAPI/シート連携）
         </div>
       </div>
 
+      <!-- RIGHT -->
       <div class="summary-column">
         <div class="summary-right">
-          <div class="graph-header">
-            <div class="graph-header-title">グラフ（180日）</div>
-            <div class="graph-switch">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+            <div style="font-size:12px;font-weight:900;color:#1d4ed8;">グラフ（180日）</div>
+            <div style="display:flex;gap:6px;">
               <button class="graph-switch-btn active js-btnMes" type="button">MES-AI-A</button>
               <button class="graph-switch-btn js-btnKeepa" type="button">Keepa</button>
             </div>
@@ -595,16 +843,17 @@ function createProductCard(asin, data){
             <div class="keepa-wrap js-keepaWrap" style="display:none;">
               <iframe class="js-keepaFrame" src="" frameborder="0" loading="lazy"></iframe>
             </div>
-            <div class="graph-caption">表示切替で MES-AI-A / Keepa を切り替えできます。</div>
           </div>
         </div>
       </div>
     </div>
 
     <div class="detail-wrap">
-      <div class="detail-head">
-        <span>下の段テーブル（その他の指標）</span>
-        <small>指標プールで「下段テーブル」に入れた項目が列になります。</small>
+      <div style="padding:10px 12px;font-weight:900;font-size:12px;border-bottom:1px solid #e5e7eb;background:#f9fafb;">
+        下段テーブル（その他の指標）
+        <span style="font-weight:800;color:#6b7280;font-size:11px;margin-left:8px;">
+          指標プールで「下段テーブル」に入れた項目が列になります
+        </span>
       </div>
       <div class="detail-scroll">
         <table class="detail-table js-detailTable">
@@ -612,15 +861,32 @@ function createProductCard(asin, data){
           <tbody><tr data-role="body"></tr></tbody>
         </table>
       </div>
-      <div class="detail-foot">
-        <span>横スクロールで全項目を確認できます。</span>
-        <span>列の並び替えはヘッダーをドラッグしてください。</span>
-      </div>
     </div>
   `;
 
+  /* remove card (行削除) */
+  card.querySelector(".js-removeCard").addEventListener("click", () => {
+    // カートからも外す
+    if(cart.has(asin)){
+      cart.delete(asin);
+      updateCartSummary();
+    }
+    // chart destroy
+    const st = cardState.get(asin);
+    try{ st?.chart?.destroy(); }catch{}
+    cardState.delete(asin);
+    card.remove();
+
+    if(cardState.size === 0){
+      emptyState.style.display = "block";
+    }
+  });
+
   /* ===== Base fill ===== */
-  card.querySelector(".js-prodImage").src = data["商品画像"] || "";
+  const img = card.querySelector(".js-prodImage");
+  img.src = data["商品画像"] || "";
+  img.onerror = () => { img.style.display = "none"; };
+
   card.querySelector(".js-title").textContent = data["品名"] || "";
   card.querySelector(".js-brand").textContent = data["ブランド"] || "";
   card.querySelector(".js-rating").textContent = data["レビュー評価"] || "";
@@ -642,11 +908,11 @@ function createProductCard(asin, data){
   card.querySelector(".js-weight").textContent = `${realWText}（${volWText}）`;
 
   card.querySelector(".js-material").textContent = data["材質"] || "－";
-  card.querySelector(".js-catP").textContent = data["親カテゴリ"] || "";
-  card.querySelector(".js-catC").textContent = data["サブカテゴリ"] || "";
+  card.querySelector(".js-catP").textContent = data["親カテゴリ"] || "－";
+  card.querySelector(".js-catC").textContent = data["サブカテゴリ"] || "－";
   renderWarningTags(card.querySelector(".js-warning"), data["注意事項（警告系）"]);
 
-  /* default price & cost */
+  /* ===== default price & cost ===== */
   const sellPriceInput = card.querySelector(".js-sellPrice");
   const costJpyInput = card.querySelector(".js-costJpy");
 
@@ -659,7 +925,7 @@ function createProductCard(asin, data){
     if (c) costJpyInput.value = c;
   }
 
-  /* cart button */
+  /* ===== cart ===== */
   const qtySelect = card.querySelector(".js-qtySelect");
   card.querySelector(".js-addCart").addEventListener("click", () => {
     const qty = Math.max(1, Number(qtySelect.value || 1));
@@ -671,7 +937,6 @@ function createProductCard(asin, data){
 
     cart.set(asin, { qty, sellUSD, costJPY });
     updateCartSummary();
-    alert(`カートに追加しました\nASIN: ${asin}\n数量: ${qty}\n販売: $${sellUSD}\n仕入: ￥${costJPY}`);
   });
 
   /* center + table */
@@ -688,8 +953,13 @@ function createProductCard(asin, data){
 
   const chkDS = card.querySelector(".js-chkDS");
   const chkSP = card.querySelector(".js-chkSP");
-  chkDS.addEventListener("change", () => updateChartVisibility(chart, chkDS.checked, chkSP.checked));
-  chkSP.addEventListener("change", () => updateChartVisibility(chart, chkDS.checked, chkSP.checked));
+
+  const refreshVis = () => updateChartVisibility(chart, chkDS.checked, chkSP.checked);
+  chkDS.addEventListener("change", () => {
+    // 片方ONにしたらもう片方OFFにしても良いが、要件では独立でOK
+    refreshVis();
+  });
+  chkSP.addEventListener("change", () => refreshVis());
   updateChartVisibility(chart, true, false);
 
   /* keepa switch */
@@ -731,7 +1001,7 @@ function addAsin(asin){
   const a = String(asin || "").trim().toUpperCase();
   if(!a) return;
 
-  const data = ASIN_DATA?.[a];
+  const data = window.ASIN_DATA?.[a];
   if(!data) return alert(`ASIN「${a}」のデータがありません`);
 
   if(cardState.has(a)){
@@ -744,6 +1014,9 @@ function addAsin(asin){
 
   emptyState.style.display = "none";
   card.scrollIntoView({ behavior:"smooth", block:"start" });
+
+  // 追加したら現在のソート条件があれば即適用しても良い（好み）
+  if(sortRules.length) applyCardSort();
 }
 
 function clearAllCards(){
@@ -753,9 +1026,9 @@ function clearAllCards(){
   emptyState.style.display = "block";
 }
 
-clearCardsBtn.addEventListener("click", clearAllCards);
+clearCardsBtn?.addEventListener("click", clearAllCards);
 
-clearCartBtn.addEventListener("click", () => {
+clearCartBtn?.addEventListener("click", () => {
   cart.clear();
   updateCartSummary();
 });
@@ -764,20 +1037,22 @@ clearCartBtn.addEventListener("click", () => {
    Catalog
 ========================= */
 function initCatalog(){
-  const asins = Object.keys(ASIN_DATA || {});
+  const asins = Object.keys(window.ASIN_DATA || {});
   headerStatus.textContent = `登録ASIN数：${asins.length}件`;
 
   asinCatalog.innerHTML = "";
   if(!asins.length) return;
 
+  // ラベル
   const label = document.createElement("span");
-  label.className = "asin-catalog-label";
   label.textContent = "データがあるASIN：";
+  label.style.background = "transparent";
+  label.style.cursor = "default";
+  label.style.fontWeight = "900";
   asinCatalog.appendChild(label);
 
   asins.forEach(a => {
     const pill = document.createElement("span");
-    pill.className = "pill";
     pill.textContent = a;
     pill.addEventListener("click", () => addAsin(a));
     asinCatalog.appendChild(pill);
@@ -785,15 +1060,42 @@ function initCatalog(){
 }
 
 /* =========================
+   Collapse metrics bar
+========================= */
+function initCollapse(){
+  if(!metricsBarEl || !metricsCollapseBtn) return;
+
+  if (METRICS_COLLAPSED) {
+    metricsBarEl.classList.add("collapsed");
+    metricsCollapseBtn.textContent = "広げる";
+  } else {
+    metricsCollapseBtn.textContent = "折りたたむ";
+  }
+
+  metricsCollapseBtn.addEventListener("click", () => {
+    METRICS_COLLAPSED = !METRICS_COLLAPSED;
+    localStorage.setItem(METRICS_COLLAPSE_KEY, METRICS_COLLAPSED ? "1" : "0");
+    metricsBarEl.classList.toggle("collapsed", METRICS_COLLAPSED);
+    metricsCollapseBtn.textContent = METRICS_COLLAPSED ? "広げる" : "折りたたむ";
+  });
+}
+
+/* =========================
    Init
 ========================= */
 document.addEventListener("DOMContentLoaded", () => {
+  // DnD attach
   attachZoneDrop(metricsPoolZone, "pool");
   attachZoneDrop(metricsCenterZone, "center");
   attachZoneDrop(metricsTableZone, "table");
   attachZoneDrop(metricsHiddenZone, "hidden");
 
   renderAllZones();
+
+  loadSortRules();
+  renderSortUI();
+
+  initCollapse();
   initCatalog();
   updateCartSummary();
 });
