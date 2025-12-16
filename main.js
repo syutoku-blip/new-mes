@@ -1,20 +1,87 @@
 /* =========================
-   Global DOM
+   DOM
 ========================= */
-const asinInput = document.getElementById("asinInput");
-const addBtn = document.getElementById("addBtn");
-const clearBtn = document.getElementById("clearBtn");
 const headerStatus = document.getElementById("headerStatus");
 const asinCatalog = document.getElementById("asinCatalog");
 const emptyState = document.getElementById("emptyState");
 const itemsContainer = document.getElementById("itemsContainer");
 
-/* Metrics pool zones */
 const metricsPoolZone = document.getElementById("metricsPoolZone");
 const metricsCenterZone = document.getElementById("metricsCenterZone");
 const metricsTableZone = document.getElementById("metricsTableZone");
 const metricsHiddenZone = document.getElementById("metricsHiddenZone");
 const metricsResetBtn = document.getElementById("metricsResetBtn");
+const clearCardsBtn = document.getElementById("clearCardsBtn");
+const clearCartBtn = document.getElementById("clearCartBtn");
+
+/* cart summary */
+const cartTotalCostEl = document.getElementById("cartTotalCost");
+const cartTotalRevenueEl = document.getElementById("cartTotalRevenue");
+const cartTotalProfitEl = document.getElementById("cartTotalProfit");
+const cartAsinCountEl = document.getElementById("cartAsinCount");
+const cartItemCountEl = document.getElementById("cartItemCount");
+
+/* =========================
+   Globals
+========================= */
+const cardState = new Map(); // asin -> { el, data, chart, state, centerBox, tableEl }
+
+/* カート状態（ASIN単位で上書き） */
+const cart = new Map(); // asin -> { qty, sellUSD, costJPY }
+
+/* 固定為替（必要なら後で入力欄化可能） */
+const FX_USDJPY = 150;
+
+/* =========================
+   Utils
+========================= */
+function yen(n){
+  const v = Math.round(Number(n || 0));
+  return "￥" + v.toLocaleString("ja-JP");
+}
+function num(n){
+  const v = Number(n);
+  return Number.isFinite(v) ? v : 0;
+}
+function createPRNG(seedStr) {
+  let seed = 0;
+  for (let i = 0; i < seedStr.length; i++) seed += seedStr.charCodeAt(i);
+  return function () {
+    seed = (seed * 9301 + 49297) % 233280;
+    return seed / 233280;
+  };
+}
+function fmtKg(v){
+  const s = String(v ?? "").trim();
+  if(!s) return "";
+  return s.includes("kg") ? s : `${s}kg`;
+}
+
+/* =========================
+   Cart summary
+========================= */
+function updateCartSummary(){
+  let totalCost = 0;
+  let totalRevenue = 0;
+  let asinCount = 0;
+  let itemCount = 0;
+
+  cart.forEach((v) => {
+    asinCount += 1;
+    itemCount += v.qty;
+
+    totalCost += v.qty * v.costJPY;
+    totalRevenue += v.qty * v.sellUSD * FX_USDJPY;
+  });
+
+  const profit = totalRevenue - totalCost;
+
+  cartTotalCostEl.textContent = yen(totalCost);
+  cartTotalRevenueEl.textContent = yen(totalRevenue);
+  cartTotalProfitEl.textContent = yen(profit);
+  cartAsinCountEl.textContent = `${asinCount}個`;
+  cartItemCountEl.textContent = `${itemCount}個`;
+}
 
 /* =========================
    Warning tags
@@ -60,17 +127,8 @@ function renderWarningTags(container, rawText) {
 }
 
 /* =========================
-   Chart helpers
+   Chart
 ========================= */
-function createPRNG(seedStr) {
-  let seed = 0;
-  for (let i = 0; i < seedStr.length; i++) seed += seedStr.charCodeAt(i);
-  return function () {
-    seed = (seed * 9301 + 49297) % 233280;
-    return seed / 233280;
-  };
-}
-
 function getDemandSupplySeries(asin) {
   const rand = createPRNG(asin);
   const days = 180;
@@ -160,11 +218,11 @@ function updateChartVisibility(chart, demandOn, supplyOn) {
 }
 
 /* =========================
-   Metrics pool (global)
+   Metrics pool
 ========================= */
-const METRICS_STORAGE_KEY = "MES_AI_METRICS_ZONES_V5";
+const METRICS_STORAGE_KEY = "MES_AI_METRICS_ZONES_V6";
 
-/* 左枠にある項目は入れない（ブランド/評価/ASIN/各種ASIN/JAN/SKU/サイズ/重量/材質/カテゴリ/注意事項） */
+/* ★大型判定（大型）は削除（要件） */
 const METRICS_ALL = [
   { id: "FBA最安値", label: "FBA最安値", sourceKey: "FBA最安値" },
   { id: "過去3月FBA最安値", label: "過去3ヶ月FBA最安値", sourceKey: "過去3月FBA最安値" },
@@ -192,7 +250,6 @@ const METRICS_ALL = [
   { id: "ライバル偏差2", label: "ライバル偏差×2", sourceKey: "ライバル偏差2" },
   { id: "ライバル増加率", label: "ライバル増加率", sourceKey: "ライバル増加率" },
 
-  { id: "大型", label: "大型判定", sourceKey: "大型" },
   { id: "請求重量", label: "請求重量", sourceKey: "請求重量" },
   { id: "容積重量", label: "容積重量", sourceKey: "容積重量" },
   { id: "想定送料", label: "想定送料", sourceKey: "想定送料" },
@@ -203,7 +260,7 @@ const METRICS_ALL = [
 const DEFAULT_ZONES = {
   pool: ["90日販売数","180日販売数","複数在庫指数45日分","複数在庫指数60日分","ライバル偏差1","ライバル偏差2","ライバル増加率","入金額計（円）","仕入合計","仕入計","容積重量","請求重量","送料"],
   center: ["FBA最安値","過去3月FBA最安値","粗利益率予測","粗利益予測","予測30日販売数"],
-  table: ["30日販売数","在庫数","返品率","販売額（ドル）","入金額（円）","仕入れ目安単価","想定送料","関税","大型"],
+  table: ["30日販売数","在庫数","返品率","販売額（ドル）","入金額（円）","仕入れ目安単価","想定送料","関税"],
   hidden: []
 };
 
@@ -256,6 +313,39 @@ function removeFromAllZones(id){
   });
 }
 
+/* ★「最後尾にしか入らない」問題対策：drop位置を算出して挿入 */
+function getBeforeIdInZone(containerEl, clientX, clientY){
+  const pills = [...containerEl.querySelectorAll(".metric-pill")];
+  if(!pills.length) return null;
+
+  let best = null;
+  let bestDist = Infinity;
+
+  for(const p of pills){
+    const r = p.getBoundingClientRect();
+    const cx = (r.left + r.right) / 2;
+    const cy = (r.top + r.bottom) / 2;
+    const d = Math.hypot(clientX - cx, clientY - cy);
+    if(d < bestDist){
+      bestDist = d;
+      best = p;
+    }
+  }
+  if(!best) return null;
+
+  // 近いpillの左側/右側どちらに落ちたかで前後を決める
+  const r = best.getBoundingClientRect();
+  const dropOnLeft = clientX < (r.left + r.right) / 2;
+  if(dropOnLeft) return best.dataset.metricId;
+
+  // 右側なら「次のpillの前」扱い（なければ末尾）
+  const idx = pills.indexOf(best);
+  if(idx >= 0 && idx + 1 < pills.length){
+    return pills[idx + 1].dataset.metricId;
+  }
+  return null;
+}
+
 function moveMetric(id, toZone, beforeId){
   removeFromAllZones(id);
 
@@ -269,7 +359,7 @@ function moveMetric(id, toZone, beforeId){
 
   saveZones();
   renderAllZones();
-  rerenderAllCards(); // 全カードに反映
+  rerenderAllCards();
 }
 
 function renderZone(el, zoneName){
@@ -282,42 +372,33 @@ function renderZone(el, zoneName){
     pill.className = "metric-pill";
     pill.textContent = m.label;
     pill.draggable = true;
+    pill.dataset.metricId = id;
 
     pill.addEventListener("dragstart", (e) => {
       e.dataTransfer.setData("text/plain", id);
       e.dataTransfer.effectAllowed = "move";
     });
 
-    pill.addEventListener("dragover", (e) => {
-      e.preventDefault();
-      pill.classList.add("drop-before");
-    });
-
-    pill.addEventListener("dragleave", () => pill.classList.remove("drop-before"));
-
-    pill.addEventListener("drop", (e) => {
-      e.preventDefault();
-      pill.classList.remove("drop-before");
-      const draggedId = e.dataTransfer.getData("text/plain");
-      if(!draggedId || draggedId === id) return;
-      moveMetric(draggedId, zoneName, id);
-    });
-
     el.appendChild(pill);
   });
 }
 
-function attachZoneDrop(listEl, zoneName){
-  const zoneBox = listEl.parentElement;
+/* zone全体で drop位置を決めて挿入する */
+function attachZoneDrop(zoneListEl, zoneName){
+  const zoneBox = zoneListEl.parentElement;
+
   zoneBox.addEventListener("dragover", (e) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
   });
+
   zoneBox.addEventListener("drop", (e) => {
     e.preventDefault();
     const draggedId = e.dataTransfer.getData("text/plain");
     if(!draggedId) return;
-    moveMetric(draggedId, zoneName, null);
+
+    const beforeId = getBeforeIdInZone(zoneListEl, e.clientX, e.clientY);
+    moveMetric(draggedId, zoneName, beforeId);
   });
 }
 
@@ -337,22 +418,8 @@ metricsResetBtn.addEventListener("click", () => {
 });
 
 /* =========================
-   Card builder (multiple ASIN)
+   Center/Table rendering
 ========================= */
-const cardState = new Map(); // asin -> { el, data, chart, cols }
-
-function pickNumberLike(v){
-  if(v == null) return "";
-  const s = String(v).trim();
-  if(!s) return "";
-  return s.replace(/[^\d.]/g, "");
-}
-function fmtKg(v){
-  const s = String(v ?? "").trim();
-  if(!s) return "";
-  return s.includes("kg") ? s : `${s}kg`;
-}
-
 function buildCenterMetrics(container, data){
   container.innerHTML = "";
   const ids = ZONES.center;
@@ -433,6 +500,17 @@ function buildDetailTable(tableEl, data, state){
   });
 }
 
+function rerenderAllCards(){
+  cardState.forEach((v) => {
+    buildCenterMetrics(v.centerBox, v.data);
+    v.state.cols = buildTableColumnsFromZones();
+    buildDetailTable(v.tableEl, v.data, v.state);
+  });
+}
+
+/* =========================
+   Card creation
+========================= */
 function createProductCard(asin, data){
   const card = document.createElement("section");
   card.className = "product-card";
@@ -444,6 +522,7 @@ function createProductCard(asin, data){
         <div class="summary-left">
           <div class="summary-image-box">
             <img class="js-prodImage" alt="商品画像" />
+
             <div class="qty-row">
               <span>数量</span>
               <select class="js-qtySelect">
@@ -451,10 +530,17 @@ function createProductCard(asin, data){
                 <option value="4">4</option><option value="5">5</option>
               </select>
             </div>
+
             <div class="price-row">
               <span>販売価格 ($)</span>
               <input class="js-sellPrice" type="number" step="0.01" placeholder="例: 39.99" />
             </div>
+
+            <div class="cost-row">
+              <span>仕入れ額 (￥)</span>
+              <input class="js-costJpy" type="number" step="1" placeholder="例: 3700" />
+            </div>
+
             <button class="cart-btn js-addCart" type="button">カートに入れる</button>
           </div>
 
@@ -551,7 +637,7 @@ function createProductCard(asin, data){
   card.querySelector(".js-sku").textContent = data["SKU"] || "－";
   card.querySelector(".js-size").textContent = data["サイズ"] || "－";
 
-  const realW = data["重量（kg）"] ?? data["重量kg"] ?? data["重量"] ?? "";
+  const realW = data["重量（kg）"] ?? data["重量"] ?? "";
   const volW  = data["容積重量"] ?? "";
   const realWText = realW ? fmtKg(realW) : "－";
   const volWText  = volW ? fmtKg(volW) : "－";
@@ -562,27 +648,35 @@ function createProductCard(asin, data){
   card.querySelector(".js-catC").textContent = data["サブカテゴリ"] || "";
   renderWarningTags(card.querySelector(".js-warning"), data["注意事項（警告系）"]);
 
-  // default price
+  // default price & cost
   const sellPriceInput = card.querySelector(".js-sellPrice");
-  const defaultPrice = data["販売額（ドル）"];
-  if (defaultPrice) {
-    const num = pickNumberLike(defaultPrice);
-    if (num) sellPriceInput.value = num;
+  const costJpyInput = card.querySelector(".js-costJpy");
+
+  if (data["販売額（ドル）"]) {
+    const s = String(data["販売額（ドル）"]).replace(/[^\d.]/g, "");
+    if (s) sellPriceInput.value = s;
+  }
+  if (data["仕入れ目安単価"]) {
+    const c = String(data["仕入れ目安単価"]).replace(/[^\d]/g, "");
+    if (c) costJpyInput.value = c;
   }
 
-  // cart
+  // cart button
   const qtySelect = card.querySelector(".js-qtySelect");
   card.querySelector(".js-addCart").addEventListener("click", () => {
-    const qty = Number(qtySelect.value || 1);
-    const price = Number(sellPriceInput.value || 0);
-    if (!price || price <= 0) return alert("販売価格（$）を入力してください");
+    const qty = Math.max(1, Number(qtySelect.value || 1));
+    const sellUSD = num(sellPriceInput.value);
+    const costJPY = num(costJpyInput.value);
 
-    const payload = { asin, qty, price, total: +(qty * price).toFixed(2) };
-    console.log("ADD_TO_CART", payload);
-    alert(`カートに追加しました\nASIN: ${asin}\n数量: ${qty}\n価格: $${price}\n小計: $${payload.total}`);
+    if (sellUSD <= 0) return alert("販売価格（$）を入力してください");
+    if (costJPY <= 0) return alert("仕入れ額（￥）を入力してください");
+
+    cart.set(asin, { qty, sellUSD, costJPY });
+    updateCartSummary();
+    alert(`カートに追加しました\nASIN: ${asin}\n数量: ${qty}\n販売: $${sellUSD}\n仕入: ￥${costJPY}`);
   });
 
-  // center metrics + table
+  // center + table
   const centerBox = card.querySelector(".js-center");
   buildCenterMetrics(centerBox, data);
 
@@ -629,55 +723,44 @@ function createProductCard(asin, data){
 
   // store
   cardState.set(asin, { el: card, data, chart, state, centerBox, tableEl });
-
   return card;
 }
 
-/* 指標配置変更を全カードへ反映 */
-function rerenderAllCards(){
-  cardState.forEach((v) => {
-    buildCenterMetrics(v.centerBox, v.data);
-    v.state.cols = buildTableColumnsFromZones();
-    buildDetailTable(v.tableEl, v.data, v.state);
-  });
-}
-
 /* =========================
-   Add/clear
+   Add/clear cards
 ========================= */
-function addAsin(){
-  const asin = asinInput.value.trim().toUpperCase();
-  if(!asin) return alert("ASINを入力してください");
+function addAsin(asin){
+  const a = String(asin || "").trim().toUpperCase();
+  if(!a) return;
 
-  const data = ASIN_DATA?.[asin];
-  if(!data) return alert(`ASIN「${asin}」のデータがありません`);
+  const data = ASIN_DATA?.[a];
+  if(!data) return alert(`ASIN「${a}」のデータがありません`);
 
-  // 既に表示中ならスクロールだけ
-  if(cardState.has(asin)){
-    const el = cardState.get(asin).el;
-    el.scrollIntoView({ behavior:"smooth", block:"start" });
+  if(cardState.has(a)){
+    cardState.get(a).el.scrollIntoView({ behavior:"smooth", block:"start" });
     return;
   }
 
-  const card = createProductCard(asin, data);
+  const card = createProductCard(a, data);
   itemsContainer.appendChild(card);
 
   emptyState.style.display = "none";
   card.scrollIntoView({ behavior:"smooth", block:"start" });
 }
 
-function clearAll(){
+function clearAllCards(){
   itemsContainer.innerHTML = "";
   cardState.forEach(v => { try{ v.chart.destroy(); }catch{} });
   cardState.clear();
   emptyState.style.display = "block";
 }
 
-addBtn.addEventListener("click", addAsin);
-asinInput.addEventListener("keydown", (e) => {
-  if(e.key === "Enter"){ e.preventDefault(); addAsin(); }
+clearCardsBtn.addEventListener("click", clearAllCards);
+
+clearCartBtn.addEventListener("click", () => {
+  cart.clear();
+  updateCartSummary();
 });
-clearBtn.addEventListener("click", clearAll);
 
 /* =========================
    Catalog
@@ -698,10 +781,7 @@ function initCatalog(){
     const pill = document.createElement("span");
     pill.className = "pill";
     pill.textContent = a;
-    pill.addEventListener("click", () => {
-      asinInput.value = a;
-      addAsin();
-    });
+    pill.addEventListener("click", () => addAsin(a));
     asinCatalog.appendChild(pill);
   });
 }
@@ -716,4 +796,5 @@ document.addEventListener("DOMContentLoaded", () => {
   attachZoneDrop(metricsHiddenZone, "hidden");
   renderAllZones();
   initCatalog();
+  updateCartSummary();
 });
