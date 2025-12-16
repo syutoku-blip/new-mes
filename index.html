@@ -13,17 +13,10 @@
     <header class="app-header">
       <div>
         <h1>MES-AI-A 詳細ビュー</h1>
-        <div class="subtitle">ASIN入力で商品カードを追加表示（複数ASIN対応）</div>
+        <div class="subtitle">ASINは上の一覧をクリックして追加表示</div>
       </div>
       <div id="headerStatus" class="status"></div>
     </header>
-
-    <div class="toolbar">
-      <label for="asinInput">ASIN：</label>
-      <input id="asinInput" type="text" placeholder="例）B0A0000001" />
-      <button id="addBtn" type="button">追加表示</button>
-      <button id="clearBtn" type="button">全てクリア</button>
-    </div>
 
     <!-- 指標プール（グローバル設定：全ASINに同じ配置が適用される） -->
     <div class="metrics-bar">
@@ -58,22 +51,37 @@
 
       <div class="metrics-bar-foot">
         <button id="metricsResetBtn" type="button">初期配置に戻す</button>
+        <button id="clearCardsBtn" type="button">表示カードを全てクリア</button>
+        <button id="clearCartBtn" type="button">カートを空にする</button>
       </div>
     </div>
 
+    <!-- データがあるASIN -->
     <div class="asin-catalog" id="asinCatalog"></div>
+
+    <!-- カート集計枠 -->
+    <div class="cart-summary card" id="cartSummary">
+      <div class="card-title">カート</div>
+      <div class="cart-grid">
+        <div class="cart-item"><div class="cart-k">今の仕入れ合計額</div><div class="cart-v" id="cartTotalCost">￥0</div></div>
+        <div class="cart-item"><div class="cart-k">売り上げ予測</div><div class="cart-v" id="cartTotalRevenue">￥0</div></div>
+        <div class="cart-item"><div class="cart-k">利益予測</div><div class="cart-v" id="cartTotalProfit">￥0</div></div>
+        <div class="cart-item"><div class="cart-k">今の仕入れASIN数</div><div class="cart-v" id="cartAsinCount">0個</div></div>
+        <div class="cart-item"><div class="cart-k">今の仕入れ商品数</div><div class="cart-v" id="cartItemCount">0個</div></div>
+      </div>
+      <div class="cart-note">※ 売上予測は「販売価格（$）」×数量×為替（固定）で円換算します。</div>
+    </div>
 
     <main class="page-body">
       <div class="content">
         <section id="emptyState" class="card">
           <div class="card-title">
-            ASINを入力して「追加表示」
-            <span class="card-sub">登録済みASINは上のラベルからクリック可能</span>
+            ASINをクリックして追加表示
+            <span class="card-sub">同じASINは二重に追加されず、既にある場合はそのカードへスクロールします</span>
           </div>
-          <div class="card-body">入力したASINごとに、下へカードが追加されます。</div>
+          <div class="card-body">上の「データがあるASIN」から選んでください。</div>
         </section>
 
-        <!-- ここにASINカードが積み上がる -->
         <div id="itemsContainer" class="items-stack"></div>
       </div>
     </main>
