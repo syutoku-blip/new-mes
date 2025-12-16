@@ -289,3 +289,6 @@ const ASIN_DATA = {
     "関税": "¥0"
   }
 };
+
+// ★これが必要（main.jsが参照するのはwindow.ASIN_DATA）
+window.ASIN_DATA = ASIN_DATA;
