@@ -20,6 +20,7 @@ body{
 
 .app-shell{ padding:0; }
 
+/* Header */
 .app-header{
   padding:14px 24px 12px;
   background: linear-gradient(90deg, #4b6bff, #8a63ff);
@@ -30,13 +31,14 @@ body{
   gap:12px;
   position:sticky;
   top:0;
-  z-index:20;
+  z-index:30;
   box-shadow: 0 2px 14px rgba(15,23,42,.30);
 }
 .app-header h1{ margin:0; font-size:18px; font-weight:900; }
 .subtitle{ font-size:11px; opacity:.9; }
 .status{ font-size:11px; opacity:.9; white-space:nowrap; }
 
+/* Metrics bar */
 .metrics-bar{
   margin:10px 24px 0;
   background:#ffffffcc;
@@ -87,7 +89,6 @@ body{
   white-space:nowrap;
 }
 .metric-pill:active{ cursor:grabbing; }
-.metric-pill.drop-before{ outline:2px dashed #a5b4fc; }
 
 .metrics-bar-foot{
   display:flex;
@@ -107,6 +108,7 @@ body{
 }
 .metrics-bar-foot button:hover{ background:#e0e7ff; }
 
+/* ASIN catalog */
 .asin-catalog{
   padding: 10px 24px 8px;
   display:flex;
@@ -129,7 +131,7 @@ body{
 }
 .pill:hover{ background:#dbeafe; }
 
-/* cart summary */
+/* Cards */
 .card{
   background:var(--card);
   border-radius:var(--r-lg);
@@ -148,8 +150,12 @@ body{
 .card-sub{ font-size:11px; color:var(--muted); font-weight:700; }
 .card-body{ padding:10px 4px 2px; color:var(--muted); font-size:12px; }
 
+/* Cart summary (sticky) */
 .cart-summary{
   margin: 0 24px 6px;
+  position: sticky;
+  top: 64px;     /* ヘッダー下に追従 */
+  z-index: 25;   /* 指標バーより上でも下でも好みで調整可 */
 }
 .cart-grid{
   margin-top:10px;
@@ -181,12 +187,12 @@ body{
   color:var(--muted);
 }
 
-/* main layout */
+/* Layout */
 .page-body{ padding:12px 20px 24px; display:flex; justify-content:center; }
 .content{ width:100%; max-width:1220px; display:flex; flex-direction:column; gap:14px; }
 .items-stack{ display:flex; flex-direction:column; gap:14px; }
 
-/* product card */
+/* Product card */
 .product-card{
   background:var(--card);
   border-radius:var(--r-lg);
@@ -296,7 +302,7 @@ body{
 }
 .basic-value{ flex:1 1 auto; font-weight:900; word-break: break-word; }
 
-/* warning tags */
+/* warning tags (inline) */
 .warning-inline .basic-value{ display:flex; flex-wrap:wrap; gap:6px; }
 .warning-tags{ display:flex; flex-wrap:wrap; gap:6px; }
 .warning-tag{
@@ -316,7 +322,7 @@ body{
 .warning-plain{ background:#f97316; }
 
 /* CENTER */
-.center-title{ font-size:12px; font-weight:900; color:#854d0e; margin-bottom:6px; }
+.center-title{ font-size:12px; font-weight:900; color:#111827; margin-bottom:6px; }
 .center-row{
   display:flex;
   justify-content:space-between;
@@ -344,6 +350,7 @@ body{
 }
 .graph-switch-btn.active{ background:#4b6bff; color:#fff; }
 
+/* checkbox row horizontal */
 .graph-options{
   display:flex !important;
   flex-direction:row !important;
