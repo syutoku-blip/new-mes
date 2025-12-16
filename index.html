@@ -5,10 +5,9 @@
   <title>MES-AI-A 商品分析</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- CSS -->
-  <link rel="stylesheet" href="./styles.css?v=1" />
+  <!-- styles.css を確実に読む（キャッシュ潰し付き） -->
+  <link rel="stylesheet" href="./styles.css?v=2" />
 
-  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
 </head>
 <body>
@@ -21,25 +20,22 @@
   <div id="headerStatus" class="header-status"></div>
 </header>
 
-<!-- 指標プール -->
-<section id="metricsBar" class="metrics-bar card">
+<section class="metrics-bar card" id="metricsBar">
   <div class="metrics-bar-head">
     <div>
       <div class="metrics-bar-title">指標プール（ドラッグして配置）</div>
-      <div class="metrics-bar-help">
-        プール → 真ん中枠 / 下段テーブル / 非表示 に移動できます
-      </div>
+      <div class="metrics-bar-help">プール → 真ん中枠 / 下段テーブル / 非表示 に移動できます（同じ指標はどちらか片方のみ）</div>
     </div>
     <button id="metricsCollapseBtn" class="ghost-btn" type="button">折りたたむ</button>
   </div>
 
   <div class="sort-bar">
-    <div class="sort-title">表示中ASINのソート（真ん中枠）</div>
+    <div class="sort-title">表示中ASINのソート（真ん中枠の指標）</div>
     <div id="sortControls" class="sort-controls"></div>
     <div class="sort-actions">
-      <button id="addSortRuleBtn">条件を追加</button>
-      <button id="applySortBtn" class="primary">ソート適用</button>
-      <button id="clearSortBtn">ソート解除</button>
+      <button id="addSortRuleBtn" type="button">条件を追加</button>
+      <button id="applySortBtn" class="primary" type="button">ソート適用</button>
+      <button id="clearSortBtn" type="button">ソート解除</button>
     </div>
   </div>
 
@@ -63,43 +59,38 @@
   </div>
 
   <div class="metrics-bar-foot">
-    <button id="metricsResetBtn">初期配置に戻す</button>
-    <button id="clearCardsBtn">表示カードをクリア</button>
-    <button id="clearCartBtn">カートを空にする</button>
+    <button id="metricsResetBtn" type="button">初期配置に戻す</button>
+    <button id="clearCardsBtn" type="button">表示カードをクリア</button>
+    <button id="clearCartBtn" type="button">カートを空にする</button>
   </div>
 </section>
 
-<!-- ASIN一覧 -->
 <section class="asin-catalog card">
   <div class="asin-catalog-head">
-    <div class="asin-catalog-title">データがあるASIN</div>
+    <div class="asin-catalog-title">データがあるASIN（クリックで検索/表示）</div>
   </div>
-  <div id="asinCatalog" class="asin-catalog-body"></div>
+  <div class="asin-catalog-body" id="asinCatalog"></div>
 </section>
 
-<!-- カート -->
 <section id="cartSummary" class="cart-summary card">
   <div class="cart-head">
     <div class="card-title">カート</div>
-    <div class="cart-note">※ 為替は固定</div>
+    <div class="cart-note">※ 仕入れ額(￥)と販売価格($)×為替(固定)で予測</div>
   </div>
   <div class="cart-grid">
-    <div><span>仕入合計</span><b id="cartTotalCost">￥0</b></div>
-    <div><span>売上予測</span><b id="cartTotalRevenue">￥0</b></div>
+    <div><span>今の仕入れ合計額</span><b id="cartTotalCost">￥0</b></div>
+    <div><span>売り上げ予測</span><b id="cartTotalRevenue">￥0</b></div>
     <div><span>利益予測</span><b id="cartTotalProfit">￥0</b></div>
-    <div><span>ASIN数</span><b id="cartAsinCount">0</b></div>
-    <div><span>商品数</span><b id="cartItemCount">0</b></div>
+    <div><span>今の仕入れASIN数</span><b id="cartAsinCount">0</b></div>
+    <div><span>今の仕入れ商品数</span><b id="cartItemCount">0</b></div>
   </div>
 </section>
 
 <main class="page-body">
-  <div id="emptyState" class="empty card">
-    ASINをクリックして商品を表示してください
-  </div>
+  <div id="emptyState" class="empty card">ASINをクリックして商品を表示してください</div>
   <div id="itemsContainer" class="items-stack"></div>
 </main>
 
-<!-- JS（順番厳守） -->
 <script src="./asin-data.js"></script>
 <script src="./main.js"></script>
 </body>
