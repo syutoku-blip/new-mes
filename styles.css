@@ -1025,12 +1025,59 @@ body.fourth-layout .l4-block .head{
 }
 
 /* 上段ブロック内の中身スクロール */
-body.fourth-layout .l4-block .info-grid,
-body.fourth-layout .l4-block .center-list{
+body.fourth-layout .l4-block .info-grid{
   flex:1;
   min-height:0;
   overflow:auto;
   padding-right:4px;
+}
+
+/* ✅ ここが変更点：主要項目を「2列グリッド」で並べる */
+body.fourth-layout .l4-center .center-list{
+  flex:1;
+  min-height:0;
+  overflow:auto;
+  padding-right:4px;
+
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap:10px;
+}
+
+/* 主要項目カード（2列でも崩れないように） */
+body.fourth-layout .l4-center .metric-row{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  border:1px solid var(--line);
+  background:#fbfdff;
+  border-radius:14px;
+  padding:10px 12px;
+  min-width:0;
+}
+body.fourth-layout .l4-center .metric-row .label{
+  font-size:12px;
+  font-weight:1000;
+  color:var(--muted);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  min-width:0;
+}
+body.fourth-layout .l4-center .metric-row .value{
+  font-size:13px;
+  font-weight:1000;
+  white-space:nowrap;
+  overflow-x:auto;
+  -webkit-overflow-scrolling: touch;
+  max-width:55%;
+}
+
+/* ✅ 画面が狭いときは1列に戻す */
+@media (max-width: 920px){
+  body.fourth-layout .l4-center .center-list{
+    grid-template-columns: 1fr;
+  }
 }
 
 body.fourth-layout .l4-image .image-box{
