@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>MES-AI-A 商品分析</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <link rel="stylesheet" href="./styles.css?v=20251217_6" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+</head>
+<body class="fourth-layout">
+
+<header class="app-header">
+  <div class="header-left">
+    <h1>MES-AI-A 商品分析</h1>
+    <div class="sub">ASINクリックでカード追加 → 上の5枠で「指標/商品情報」をまとめてカスタム</div>
+  </div>
+
+  <div class="layout-nav">
+    <a class="layout-link" href="./index.html">通常レイアウト</a>
+    <a class="layout-link" href="./alt.html">新レイアウト</a>
+    <a class="layout-link" href="./layout3.html">レイアウト3</a>
+    <a class="layout-link active" href="./layout4.html">レイアウト4</a>
+  </div>
+
+  <div class="header-status" id="headerStatus"></div>
+</header>
+
+<main class="page-body">
+
+  <!-- 指標エリア（5枠） -->
+  <section id="metricsBar" class="metrics-bar card">
+    <div class="metrics-bar-head">
+      <div>
+        <div class="metrics-bar-title">指標カスタム（ドラッグ＆ドロップ）</div>
+        <div class="metrics-bar-help">プール / 商品情報 / 主要項目 / 下段 / 非 の 5枠で、表示項目を切り替えます</div>
+      </div>
+      <button id="btnToggleMetrics" class="ghost-btn" type="button">折りたたみ</button>
+    </div>
+
+    <div id="sortBar">
+      <div class="sort-title">並び替え</div>
+      <div class="sort-controls">
+        <div class="sort-row">
+          <select id="sortCol">
+            <option value="">（なし）</option>
+          </select>
+          <select id="sortOrder">
+            <option value="desc">降順</option>
+            <option value="asc">昇順</option>
+          </select>
+        </div>
+        <div class="sort-actions">
+          <button id="btnApplySort" class="primary" type="button">適用</button>
+          <button id="btnClearSort" type="button">解除</button>
+          <button id="btnResetZones" type="button">配置リセット</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="metrics-row">
+      <div class="metrics-zone">
+        <div class="metrics-zone-title">プール</div>
+        <div id="zonePool" class="metrics-zone-list"></div>
+      </div>
+
+      <div class="metrics-zone">
+        <div class="metrics-zone-title">商品情報</div>
+        <div id="zoneInfo" class="metrics-zone-list"></div>
+      </div>
+
+      <div class="metrics-zone">
+        <div class="metrics-zone-title">主要項目</div>
+        <div id="zoneCenter" class="metrics-zone-list"></div>
+      </div>
+
+      <div class="metrics-zone">
+        <div class="metrics-zone-title">下段</div>
+        <div id="zoneTable" class="metrics-zone-list"></div>
+      </div>
+
+      <div class="metrics-zone">
+        <div class="metrics-zone-title">非</div>
+        <div id="zoneHidden" class="metrics-zone-list"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ASIN一覧 -->
+  <section class="asin-catalog card">
+    <div class="asin-catalog-head">
+      <div class="asin-catalog-title">ASIN一覧</div>
+    </div>
+    <div id="asinCatalog" class="asin-catalog-body"></div>
+  </section>
+
+  <!-- カート集計 -->
+  <section id="cartSummary" class="cart-summary card">
+    <div class="cart-head">
+      <div>
+        <div class="card-title">カート集計</div>
+        <div class="cart-note">カード内の「カートに入れる」で集計に加算</div>
+      </div>
+    </div>
+    <div class="cart-grid">
+      <div><span>商品数（合計数量）</span><b id="cartCount">0</b></div>
+      <div><span>合計販売額（$）</span><b id="cartTotalSales">$0.00</b></div>
+      <div><span>合計仕入れ（￥）</span><b id="cartTotalCost">￥0</b></div>
+      <div><span>粗利益（￥）</span><b id="cartTotalProfit">￥0</b></div>
+      <div><span>平均粗利率</span><b id="cartAvgMargin">0.0%</b></div>
+    </div>
+  </section>
+
+  <div id="emptyState" class="empty card">
+    ASINをクリックして商品を表示してください
+  </div>
+
+  <div id="itemsContainer" class="items-stack"></div>
+</main>
+
+<script src="./asin-data.js"></script>
+<script src="./main.js"></script>
+</body>
+</html>
