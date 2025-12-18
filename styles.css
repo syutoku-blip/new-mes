@@ -453,13 +453,12 @@ button{ font-family:inherit; }
   grid-template-columns: 140px 1fr;
   gap:8px 12px;
   align-items:start;
-  /* ✅ 追加：枠全体をスクロール（縦/横） */
   overflow:auto;
   min-height:0;
-  padding-right:4px; /* スクロールバー用 */
+  padding-right:4px;
 }
 
-/* ✅ 追加：値セル側は「自分だけスクロール」させない */
+/* 値セル側は「自分だけスクロール」させない（枠全体スクロール） */
 .info-grid .v{
   overflow:visible;
   padding-bottom:0;
@@ -472,7 +471,7 @@ button{ font-family:inherit; }
   white-space:nowrap;
 }
 
-/* ✅ 商品情報の値：横スクロール */
+/* 商品情報の値：横スクロール（通常カード・テーブル用） */
 .v{
   font-size:13px;
   font-weight:900;
@@ -800,26 +799,22 @@ body.alt-layout .keepa-wrap iframe{
 
 /* =========================
    Layout3 (3rd page)
-   - 画像2の配置イメージ
    - 商品情報①/②に分割
    - keepa小 + 需要供給グラフ大
 ========================= */
 body.third-layout .layout3-grid{
   display:grid;
-  /* ✅ ノートPC幅でも右の「カート」まで収まるように、固定pxを減らして伸縮させる */
   grid-template-columns:
     minmax(240px, 320px)
     minmax(220px, 300px)
     minmax(220px, 300px)
     minmax(320px, 1fr)
     minmax(200px, 240px);
-  /* ✅ 上段（赤枠）の高さを揃える */
   grid-template-rows: 320px auto;
   gap:14px;
   align-items:stretch;
 }
 
-/* ✅ ノートPC想定（1366px前後）で横幅が溢れないようにさらに詰める */
 @media (max-width: 1400px){
   body.third-layout .layout3-grid{
     grid-template-columns:
@@ -833,17 +828,13 @@ body.third-layout .layout3-grid{
   }
 }
 
-/* ✅ さらに狭い場合は、カートを下に回して崩れを防ぐ */
 @media (max-width: 1180px){
   body.third-layout .layout3-grid{
     grid-template-columns: 1fr;
     grid-template-rows: auto;
     gap:12px;
   }
-  body.third-layout .l3-buy{
-    grid-column:auto;
-    grid-row:auto;
-  }
+  body.third-layout .l3-buy,
   body.third-layout .l3-keepa,
   body.third-layout .l3-mes,
   body.third-layout .l3-image,
@@ -855,35 +846,13 @@ body.third-layout .layout3-grid{
   }
 }
 
-body.third-layout .l3-image{
-  grid-column:1;
-  grid-row:1;
-}
-body.third-layout .l3-infoA{
-  grid-column:2;
-  grid-row:1;
-}
-body.third-layout .l3-infoB{
-  grid-column:3;
-  grid-row:1;
-}
-body.third-layout .l3-center{
-  grid-column:4;
-  grid-row:1;
-}
-body.third-layout .l3-buy{
-  grid-column:5;
-  grid-row:1 / span 2;
-}
-
-body.third-layout .l3-keepa{
-  grid-column:1;
-  grid-row:2;
-}
-body.third-layout .l3-mes{
-  grid-column:2 / span 3;
-  grid-row:2;
-}
+body.third-layout .l3-image{ grid-column:1; grid-row:1; }
+body.third-layout .l3-infoA{ grid-column:2; grid-row:1; }
+body.third-layout .l3-infoB{ grid-column:3; grid-row:1; }
+body.third-layout .l3-center{ grid-column:4; grid-row:1; }
+body.third-layout .l3-buy{ grid-column:5; grid-row:1 / span 2; }
+body.third-layout .l3-keepa{ grid-column:1; grid-row:2; }
+body.third-layout .l3-mes{ grid-column:2 / span 3; grid-row:2; }
 
 body.third-layout .l3-block{
   border:1px solid var(--line);
@@ -891,20 +860,16 @@ body.third-layout .l3-block{
   background:#fff;
   padding:12px 14px;
   min-width:0;
-  /* ✅ 追加：中身を高さ揃え + スクロール可能にするため */
   display:flex;
   flex-direction:column;
   height:100%;
   min-height:0;
 }
-
 body.third-layout .l3-block .head{
   font-size:12px;
   font-weight:1000;
   margin-bottom:10px;
 }
-
-/* ✅ 追加：上段ブロック内のコンテンツは必要に応じてスクロール */
 body.third-layout .l3-block .info-grid,
 body.third-layout .l3-block .center-list{
   flex:1;
@@ -947,9 +912,7 @@ body.third-layout .l3-buy select{
   font-weight:1000;
   font-size:13px;
 }
-body.third-layout .l3-buy .cart-btn{
-  height:46px;
-}
+body.third-layout .l3-buy .cart-btn{ height:46px; }
 
 body.third-layout .l3-keepa{
   background:#f3f4f6;
@@ -975,6 +938,164 @@ body.third-layout .l3-mes .mes-big{
   background:#eef2ff;
 }
 body.third-layout .l3-mes canvas{
+  width:100%;
+  height:100%;
+}
+
+@media (max-width: 860px){
+  body.third-layout .layout3-grid{ grid-template-columns: 1fr 1fr; }
+  body.third-layout .l3-buy{ grid-column:1 / -1; grid-row:auto; }
+  body.third-layout .l3-mes{ grid-column:1 / -1; }
+  body.third-layout .l3-center{ grid-column:1 / -1; }
+  body.third-layout .l3-infoA{ grid-column:1; }
+  body.third-layout .l3-infoB{ grid-column:2; }
+  body.third-layout .l3-image{ grid-column:1 / -1; }
+  body.third-layout .l3-keepa{ grid-column:1 / -1; }
+}
+
+/* =========================
+   Layout4 (4th page)
+   - 画像の配置イメージ（商品画像/商品情報①/主要項目/カート）
+   - 下段：keepa（小） + 需要供給（横長）
+========================= */
+body.fourth-layout .layout4-grid{
+  display:grid;
+  grid-template-columns:
+    minmax(240px, 320px)
+    minmax(260px, 380px)
+    minmax(360px, 1fr)
+    minmax(200px, 240px);
+  grid-template-rows: 320px 280px;
+  gap:14px;
+  align-items:stretch;
+}
+
+@media (max-width: 1400px){
+  body.fourth-layout .layout4-grid{
+    grid-template-columns:
+      minmax(220px, 280px)
+      minmax(240px, 320px)
+      minmax(320px, 1fr)
+      minmax(180px, 220px);
+    grid-template-rows: 300px 260px;
+    gap:10px;
+  }
+}
+
+/* さらに狭い場合は縦積み（崩れ防止） */
+@media (max-width: 1180px){
+  body.fourth-layout .layout4-grid{
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    gap:12px;
+  }
+  body.fourth-layout .l4-buy,
+  body.fourth-layout .l4-mes,
+  body.fourth-layout .l4-keepa,
+  body.fourth-layout .l4-center,
+  body.fourth-layout .l4-info,
+  body.fourth-layout .l4-image{
+    grid-column:auto;
+    grid-row:auto;
+  }
+}
+
+body.fourth-layout .l4-image{ grid-column:1; grid-row:1; }
+body.fourth-layout .l4-info{ grid-column:2; grid-row:1; }
+body.fourth-layout .l4-center{ grid-column:3; grid-row:1; }
+body.fourth-layout .l4-buy{ grid-column:4; grid-row:1 / span 2; }
+body.fourth-layout .l4-keepa{ grid-column:1; grid-row:2; }
+body.fourth-layout .l4-mes{ grid-column:2 / span 2; grid-row:2; }
+
+body.fourth-layout .l4-block{
+  border:1px solid var(--line);
+  border-radius:var(--radius2);
+  background:#fff;
+  padding:12px 14px;
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  height:100%;
+  min-height:0;
+}
+body.fourth-layout .l4-block .head{
+  font-size:12px;
+  font-weight:1000;
+  margin-bottom:10px;
+}
+
+/* 上段ブロック内の中身スクロール */
+body.fourth-layout .l4-block .info-grid,
+body.fourth-layout .l4-block .center-list{
+  flex:1;
+  min-height:0;
+  overflow:auto;
+  padding-right:4px;
+}
+
+body.fourth-layout .l4-image .image-box{
+  width:100%;
+  gap:0;
+}
+body.fourth-layout .l4-image .image-box img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  border-radius:var(--radius2);
+  border:1px solid var(--line);
+  background:#f8fafc;
+  display:block;
+}
+
+/* 右のカート */
+body.fourth-layout .l4-buy{
+  border:2px solid #111827;
+  border-radius:var(--radius2);
+  padding:12px;
+  background:#fff;
+}
+body.fourth-layout .l4-buy .buy-title{
+  font-size:12px;
+  font-weight:1000;
+  color:var(--muted);
+}
+body.fourth-layout .l4-buy input,
+body.fourth-layout .l4-buy select{
+  width:100%;
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:10px 10px;
+  font-weight:1000;
+  font-size:13px;
+}
+body.fourth-layout .l4-buy .cart-btn{ height:46px; }
+
+/* keepa（小） */
+body.fourth-layout .l4-keepa{
+  background:#f3f4f6;
+}
+body.fourth-layout .l4-keepa .keepa-mini{
+  height:200px;
+  border-radius:14px;
+  overflow:hidden;
+  border:1px solid var(--line);
+  background:#fff;
+}
+body.fourth-layout .l4-keepa iframe{
+  width:100%;
+  height:100%;
+  border:0;
+}
+
+/* 需要供給（横長） */
+body.fourth-layout .l4-mes .mes-wide{
+  height:220px;
+  border-radius:14px;
+  overflow:hidden;
+  border:1px solid #dbeafe;
+  background:#eef2ff;
+}
+body.fourth-layout .l4-mes canvas{
   width:100%;
   height:100%;
 }
