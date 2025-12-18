@@ -1,1164 +1,1084 @@
-/* =========================================================
-   MES-AI-A main.js (FULL)
-   - Requires: window.ASIN_DATA (from asin-data.js or API)
-   - Requires: Chart.js loaded in index.html
-   - Works with your current index.html IDs:
-     #asinCatalog #itemsContainer #emptyState #headerStatus
-     #metricsPoolZone #metricsCenterZone #metricsTableZone #metricsHiddenZone
-     #metricsCollapseBtn #metricsResetBtn #clearCardsBtn #clearCartBtn
-     #sortControls #addSortRuleBtn #applySortBtn #clearSortBtn
-     #cartTotalCost #cartTotalRevenue #cartTotalProfit #cartAsinCount #cartItemCount
-========================================================= */
+/**************************************************************
+ * main.js
+ * - レイアウト3追加（body.third-layout）
+ * - 商品情報は商品情報枠（zoneState.info）を上から半分ずつで
+ *   商品情報①/商品情報②に分割表示（レイアウト3のみ）
+ **************************************************************/
 
-(() => {
-  /* -----------------------------
-     DOM
-  ----------------------------- */
-  const headerStatus = document.getElementById("headerStatus");
-  const asinCatalog = document.getElementById("asinCatalog");
-  const itemsContainer = document.getElementById("itemsContainer");
-  const emptyState = document.getElementById("emptyState");
+const $ = (sel, root = document) => root.querySelector(sel);
+const FX_RATE = 155;
 
-  const metricsBar = document.querySelector(".metrics-bar");
-  const metricsCollapseBtn = document.getElementById("metricsCollapseBtn");
+const fmtJPY = (n) => "￥" + Number(n || 0).toLocaleString("ja-JP");
+const num = (v) => {
+  const x = Number(String(v ?? "").replace(/[^\d.\-]/g, ""));
+  return Number.isFinite(x) ? x : 0;
+};
+const fmtKg = (v) => {
+  const x = Number(String(v ?? "").replace(/[^\d.]/g, ""));
+  if (!Number.isFinite(x) || x === 0) return "－";
+  return x.toFixed(2) + "kg";
+};
 
-  const zonePool = document.getElementById("metricsPoolZone");
-  const zoneCenter = document.getElementById("metricsCenterZone");
-  const zoneTable = document.getElementById("metricsTableZone");
-  const zoneHidden = document.getElementById("metricsHiddenZone");
+/* =========================
+   指標（候補）
+========================= */
+const METRICS_ALL = [
+  { id: "過去3月FBA最安値", label: "過去3ヶ月FBA最安値", sourceKey: "過去3月FBA最安値" },
+  { id: "FBA最安値", label: "FBA最安値", sourceKey: "FBA最安値" },
 
-  const metricsResetBtn = document.getElementById("metricsResetBtn");
-  const clearCardsBtn = document.getElementById("clearCardsBtn");
-  const clearCartBtn = document.getElementById("clearCartBtn");
+  { id: "粗利益率予測", label: "粗利益率予測", sourceKey: "粗利益率予測" },
+  { id: "入金額予測", label: "入金額予測（円）", sourceKey: "入金額予測" },
+  { id: "粗利益予測", label: "粗利益予測（1個）", sourceKey: "粗利益予測" },
 
-  const sortControls = document.getElementById("sortControls");
-  const addSortRuleBtn = document.getElementById("addSortRuleBtn");
-  const applySortBtn = document.getElementById("applySortBtn");
-  const clearSortBtn = document.getElementById("clearSortBtn");
+  { id: "粗利益", label: "粗利益", sourceKey: "粗利益" },
+  { id: "粗利益率", label: "粗利益率", sourceKey: "粗利益率" },
 
-  const cartTotalCostEl = document.getElementById("cartTotalCost");
-  const cartTotalRevenueEl = document.getElementById("cartTotalRevenue");
-  const cartTotalProfitEl = document.getElementById("cartTotalProfit");
-  const cartAsinCountEl = document.getElementById("cartAsinCount");
-  const cartItemCountEl = document.getElementById("cartItemCount");
+  { id: "販売額（ドル）", label: "販売額（USD）", sourceKey: "販売額（ドル）" },
+  { id: "入金額（円）", label: "入金額（円）", sourceKey: "入金額（円）" },
+  { id: "入金額計（円）", label: "入金額計（円）", sourceKey: "入金額計（円）" },
 
-  /* -----------------------------
-     Global State
-  ----------------------------- */
-  const FX = 150; // dummy USD->JPY
-  const CART = new Map(); // asin -> { qty, priceUSD, costJPY }
-  const CARDS = new Map(); // asin -> { root, chart, mode, checks, inputs }
+  { id: "30日販売数", label: "30日販売数（実績）", sourceKey: "30日販売数" },
+  { id: "90日販売数", label: "90日販売数（実績）", sourceKey: "90日販売数" },
+  { id: "180日販売数", label: "180日販売数（実績）", sourceKey: "180日販売数" },
+  { id: "予測30日販売数", label: "予測30日販売数", sourceKey: "予測30日販売数" },
 
-  // Sorting rules: [{ metricId, dir }]
-  let sortRules = [];
+  { id: "複数在庫指数45日分", label: "複数在庫指数45日分", sourceKey: "複数在庫指数45日分" },
+  { id: "複数在庫指数60日分", label: "複数在庫指数60日分", sourceKey: "複数在庫指数60日分" },
 
-  // Drag context for metric pills
-  let draggingPillId = null;
+  { id: "ライバル偏差1", label: "ライバル偏差1", sourceKey: "ライバル偏差1" },
+  { id: "ライバル偏差2", label: "ライバル偏差2", sourceKey: "ライバル偏差2" },
+  { id: "ライバル増加率", label: "ライバル増加率", sourceKey: "ライバル増加率" },
 
-  /* -----------------------------
-     Fixed fields (LEFT CARD)
-     These must NOT appear in metric pool/table/center
-  ----------------------------- */
-  const FIXED_FIELDS = new Set([
-    "ブランド",
-    "レビュー評価",
-    "ASIN",
-    "アメリカASIN",
-    "日本ASIN",
-    "各種ASIN",
-    "JAN",
-    "SKU",
-    "サイズ",
-    "重量（容積重量）",
-    "重量kg",
-    "容積重量",
-    "材質",
-    "親カテゴリ",
-    "サブカテゴリ",
-    "カテゴリ",
-    "注意事項（警告系）",
-    "注意事項",
-  ]);
+  { id: "在庫数", label: "在庫数", sourceKey: "在庫数" },
+  { id: "返品率", label: "返品率", sourceKey: "返品率" },
 
-  /* -----------------------------
-     Metric Definitions
-     id: internal ID
-     label: shown on pill + table header
-     getValue(data): raw value (string/number)
-     format(value, data): text shown in UI
-     parse(value, data): number for sorting
-     tip(data): tooltip for 日本最安値
-  ----------------------------- */
-  const METRICS = [
-    // --- Center/Key metrics candidates ---
-    { id: "fbaMin", label: "FBA最安値", key: "FBA最安値" },
-    { id: "fbaMin3m", label: "過去3ヶ月FBA最安値", key: "過去3月FBA最安値" },
-    { id: "grossRatePred", label: "粗利益率予測", key: "粗利益率予測" },
-    { id: "grossPredPer", label: "粗利益予測（1個あたり）", key: "粗利益予測" },
-    { id: "pred30", label: "予測30日販売数", key: "予測30日販売数" },
+  { id: "日本最安値", label: "日本最安値", sourceKey: "日本最安値" },
 
-    // --- Table metrics candidates ---
-    { id: "sales30", label: "30日販売数（実績）", key: "30日販売数" },
-    { id: "sales90", label: "90日販売数（実績）", key: "90日販売数" },
-    { id: "sales180", label: "180日販売数（実績）", key: "180日販売数" },
-    { id: "stock", label: "在庫数", key: "在庫数" },
-    { id: "returnRate", label: "返品率", key: "返品率" },
-    { id: "salesUSD", label: "販売額（USD）", key: "販売額（ドル）" },
-    { id: "depositJPY", label: "入金額（円）", key: "入金額（円）" },
-    { id: "depositTotalJPY", label: "入金額計（円）", key: "入金額計（円）" },
+  { id: "仕入れ目安単価", label: "仕入れ目安単価", sourceKey: "仕入れ目安単価" },
+  { id: "想定送料", label: "想定送料", sourceKey: "想定送料" },
+  { id: "送料", label: "送料", sourceKey: "送料" },
+  { id: "関税", label: "関税", sourceKey: "関税" }
+];
+const METRIC_BY_ID = Object.fromEntries(METRICS_ALL.map((m) => [m.id, m]));
 
-    { id: "multiIdx45", label: "複数在庫指数（45日）", key: "複数在庫指数45日分" },
-    { id: "multiIdx60", label: "複数在庫指数（60日）", key: "複数在庫指数60日分" },
+/* =========================
+   商品情報（項目）候補
+========================= */
+const INFO_FIELDS_ALL = [
+  { id: "商品名", label: "商品名", kind: "computedTitle" },
+  { id: "ブランド", label: "ブランド", kind: "text", sourceKey: "ブランド" },
+  { id: "評価", label: "評価", kind: "text", sourceKey: "レビュー評価" },
 
-    { id: "rivalDev1", label: "ライバル偏差×1", key: "ライバル偏差1" },
-    { id: "rivalDev2", label: "ライバル偏差×2", key: "ライバル偏差2" },
-    { id: "rivalGrowth", label: "ライバル増加率", key: "ライバル増加率" },
+  { id: "各種ASIN", label: "各種ASIN", kind: "computed" },
+  { id: "JAN", label: "JAN", kind: "text", sourceKey: "JAN" },
+  { id: "SKU", label: "SKU", kind: "text", sourceKey: "SKU" },
 
-    { id: "shipEst", label: "想定送料", key: "想定送料" },
-    { id: "ship", label: "送料", key: "送料" },
-    { id: "duty", label: "関税", key: "関税" },
-    { id: "billWeight", label: "請求重量", key: "請求重量" },
+  { id: "サイズ", label: "サイズ", kind: "computed" },
+  { id: "重量（容積重量）", label: "重量（容積重量）", kind: "computed" },
 
-    { id: "purchaseUnit", label: "仕入れ目安単価", key: "仕入れ目安単価" },
-    { id: "purchaseTotal", label: "仕入合計", key: "仕入合計" },
-    { id: "purchaseTotal2", label: "仕入計", key: "仕入計" },
+  { id: "カテゴリ", label: "カテゴリ", kind: "computed" },
+  { id: "注意事項", label: "注意事項", kind: "computedTags" },
+  { id: "材質", label: "材質", kind: "text", sourceKey: "材質" }
+];
+const INFO_BY_ID = Object.fromEntries(INFO_FIELDS_ALL.map((f) => [f.id, f]));
 
-    // --- Japan lowest price with tooltip ---
-    {
-      id: "jpLowest",
-      label: "日本最安値",
-      key: "日本最安値",
-      tooltip: (data) => {
-        const amazon = data["日本最安値_Amazon"] ?? data["日本最安値Amazon"] ?? data["日本最安値(amazon)"];
-        const yahoo = data["日本最安値_Yahoo"] ?? data["日本最安値yahoo"] ?? data["日本最安値(Yahoo)"];
-        const rakuten = data["日本最安値_楽天"] ?? data["日本最安値楽天"] ?? data["日本最安値(Rakuten)"];
+/* =========================
+   token
+========================= */
+const tokM = (id) => `M:${id}`;
+const tokI = (id) => `I:${id}`;
 
-        // fallback: use existing fields if available
-        const fb = data["日本FBA最安値"];
-        const mf = data["日本自己発送最安値"];
-        const base = data["日本最安値"];
+function parseToken(token) {
+  const [t, ...rest] = String(token).split(":");
+  const id = rest.join(":");
+  return { type: t, id };
+}
+function labelOf(token) {
+  const { type, id } = parseToken(token);
+  if (type === "M") return METRIC_BY_ID[id]?.label || id;
+  if (type === "I") return INFO_BY_ID[id]?.label || id;
+  return id;
+}
 
-        const a = amazon ?? (base ? `Amazon ${base}` : (fb ? `Amazon(FBA) ${fb}` : "-"));
-        const y = yahoo ?? "-";
-        const r = rakuten ?? "-";
+/* =========================
+   初期配置
+========================= */
+const DEFAULT_ZONES = {
+  pool: [
+    ...METRICS_ALL.map((m) => tokM(m.id)),
+    ...INFO_FIELDS_ALL.map((f) => tokI(f.id))
+  ],
+  info: [
+    tokI("商品名"),
+    tokI("ブランド"),
+    tokI("評価"),
+    tokI("各種ASIN"),
+    tokI("JAN"),
+    tokI("SKU"),
+    tokI("サイズ"),
+    tokI("重量（容積重量）"),
+    tokI("カテゴリ"),
+    tokI("注意事項"),
+    tokI("材質")
+  ],
+  center: [
+    tokM("過去3月FBA最安値"),
+    tokM("FBA最安値"),
+    tokM("入金額予測"),
+    tokM("180日販売数"),
+    tokM("90日販売数"),
+    tokM("粗利益率予測"),
+    tokM("30日販売数"),
+    tokM("日本最安値"),
+    tokM("粗利益予測")
+  ],
+  table: [
+    tokM("在庫数"),
+    tokM("想定送料"),
+    tokM("返品率"),
+    tokM("仕入れ目安単価"),
+    tokM("販売額（ドル）"),
+    tokM("送料"),
+    tokM("関税"),
+    tokM("予測30日販売数"),
+    tokM("入金額（円）")
+  ],
+  hidden: []
+};
 
-        return `Amazon　${a}\nYahoo　　${y}\n楽天　　 ${r}`;
-      }
-    },
-  ].map(m => normalizeMetric(m));
+function normalizeDefaultZones() {
+  const used = new Set([...DEFAULT_ZONES.info, ...DEFAULT_ZONES.center, ...DEFAULT_ZONES.table, ...DEFAULT_ZONES.hidden]);
+  DEFAULT_ZONES.pool = DEFAULT_ZONES.pool.filter((t) => !used.has(t));
+}
+normalizeDefaultZones();
 
-  function normalizeMetric(m) {
-    // Provide default accessors/formatters/parsers
-    return {
-      ...m,
-      getValue: (data) => data?.[m.key],
-      format: (v) => (v === undefined || v === null || v === "" ? "—" : String(v)),
-      parse: (v) => parseNumberLike(v),
-    };
-  }
+const zoneState = {
+  pool: [...DEFAULT_ZONES.pool],
+  info: [...DEFAULT_ZONES.info],
+  center: [...DEFAULT_ZONES.center],
+  table: [...DEFAULT_ZONES.table],
+  hidden: [...DEFAULT_ZONES.hidden]
+};
 
-  // Initial placement (feel free to tweak)
-  const DEFAULT_LAYOUT = {
-    pool: [
-      "sales90", "sales180",
-      "multiIdx45", "multiIdx60",
-      "rivalDev1", "rivalDev2", "rivalGrowth",
-      "depositTotalJPY",
-      "purchaseTotal",
-      "ship", "shipEst", "duty", "billWeight",
-      "jpLowest",
-    ],
-    center: ["fbaMin", "fbaMin3m", "grossRatePred", "grossPredPer", "pred30"],
-    table: ["sales30", "stock", "returnRate", "salesUSD", "depositJPY", "purchaseUnit"],
-    hidden: [
-      "depositJPY", "depositTotalJPY", "purchaseTotal2", "purchaseTotal",
-      // "jpLowest" is visible by default in pool; user can move it
-    ],
-  };
+const cardState = new Map();
+const cart = new Map();
 
-  // Live layout state
-  const layout = {
-    pool: [],
-    center: [],
-    table: [],
-    hidden: [],
-  };
+/* ===== DOM refs ===== */
+const metricsBar = $("#metricsBar");
 
-  /* -----------------------------
-     Helpers
-  ----------------------------- */
-  function yen(n) {
-    const num = Number(n);
-    if (!isFinite(num)) return "￥0";
-    return "￥" + Math.round(num).toLocaleString("ja-JP");
-  }
-  function usd(n) {
-    const num = Number(n);
-    if (!isFinite(num)) return "$0.00";
-    return "$" + num.toFixed(2);
-  }
-  function parseNumberLike(v) {
-    if (v === undefined || v === null) return NaN;
-    if (typeof v === "number") return v;
-    const s = String(v).trim();
-    // handle % , currency, + sign
-    const cleaned = s
-      .replace(/[,，]/g, "")
-      .replace(/[￥¥]/g, "")
-      .replace(/\$/g, "")
-      .replace(/円/g, "")
-      .replace(/kg/gi, "")
-      .replace(/[%％]/g, "")
-      .replace(/[+]/g, "");
-    const num = Number(cleaned);
-    return isFinite(num) ? num : NaN;
-  }
-  function safeText(v, fallback = "—") {
-    const s = (v ?? "").toString().trim();
-    return s ? s : fallback;
-  }
-  function getData() {
-    return window.ASIN_DATA || {};
-  }
+const zonePool = $("#metricsPoolZone");
+const zoneInfo = $("#metricsInfoZone");
+const zoneCenter = $("#metricsCenterZone");
+const zoneTable = $("#metricsTableZone");
+const zoneHidden = $("#metricsHiddenZone");
 
-  /* -----------------------------
-     Layout init/render
-  ----------------------------- */
-  function resetLayout() {
-    layout.pool = [...DEFAULT_LAYOUT.pool];
-    layout.center = [...DEFAULT_LAYOUT.center];
-    layout.table = [...DEFAULT_LAYOUT.table];
+/* buttons */
+const metricsCollapseBtn = $("#metricsCollapseBtn");
+const resetBtn = $("#resetCurrentBtn");
+const clearCardsBtn = $("#clearCardsBtn");
+const clearCartBtn = $("#clearCartBtn");
 
-    // hidden = all metrics that are not in pool/center/table + defaults hidden
-    const used = new Set([...layout.pool, ...layout.center, ...layout.table]);
-    const all = METRICS.map(m => m.id);
-    const rest = all.filter(id => !used.has(id));
-    const extraHidden = DEFAULT_LAYOUT.hidden.filter(id => !used.has(id));
-    layout.hidden = Array.from(new Set([...extraHidden, ...rest]));
-  }
+/* catalog */
+const asinCatalog = $("#asinCatalog");
+const itemsContainer = $("#itemsContainer");
+const emptyState = $("#emptyState");
+const headerStatus = $("#headerStatus");
 
-  function renderPills() {
-    zonePool.innerHTML = "";
-    zoneCenter.innerHTML = "";
-    zoneTable.innerHTML = "";
-    zoneHidden.innerHTML = "";
+/* cart */
+const cartTotalCost = $("#cartTotalCost");
+const cartTotalRevenue = $("#cartTotalRevenue");
+const cartTotalProfit = $("#cartTotalProfit");
+const cartAsinCount = $("#cartAsinCount");
+const cartItemCount = $("#cartItemCount");
 
-    layout.pool.forEach(id => zonePool.appendChild(createPill(id)));
-    layout.center.forEach(id => zoneCenter.appendChild(createPill(id)));
-    layout.table.forEach(id => zoneTable.appendChild(createPill(id)));
-    layout.hidden.forEach(id => zoneHidden.appendChild(createPill(id)));
+/* sort */
+const sortBar = $("#sortBar");
+const sortControls = $("#sortControls");
+const addSortRuleBtn = $("#addSortRuleBtn");
+const applySortBtn = $("#applySortBtn");
+const clearSortBtn = $("#clearSortBtn");
+let sortRules = [];
 
-    renderSortControls();
-    refreshAllCards(); // re-render center + table columns
-  }
+init();
 
-  function createPill(metricId) {
-    const m = METRICS.find(x => x.id === metricId);
-    const el = document.createElement("div");
-    el.className = "metric-pill";
-    el.textContent = m ? m.label : metricId;
-    el.setAttribute("draggable", "true");
-    el.dataset.metricId = metricId;
+function init() {
+  initPoolUI();
+  initCatalog();
+  initSortUI();
+  initActions();
+  updateCartSummary();
+  updateHeaderStatus();
+  renderTopZones();
+}
 
-    el.addEventListener("dragstart", (e) => {
-      draggingPillId = metricId;
-      e.dataTransfer?.setData("text/plain", metricId);
-      e.dataTransfer?.setDragImage?.(el, 10, 10);
-    });
-    el.addEventListener("dragend", () => {
-      draggingPillId = null;
-      clearDropHints();
-    });
+function initPoolUI() {
+  attachZoneDnD(zonePool, { zoneKey: "pool" });
+  attachZoneDnD(zoneInfo, { zoneKey: "info" });
+  attachZoneDnD(zoneCenter, { zoneKey: "center" });
+  attachZoneDnD(zoneTable, { zoneKey: "table" });
+  attachZoneDnD(zoneHidden, { zoneKey: "hidden" });
+}
 
-    return el;
-  }
+function initActions() {
+  metricsCollapseBtn?.addEventListener("click", () => {
+    metricsBar.classList.toggle("collapsed");
+    metricsCollapseBtn.textContent = metricsBar.classList.contains("collapsed") ? "展開する" : "折りたたむ";
+  });
 
-  function setupDropZone(zoneEl, zoneKey) {
-    zoneEl.addEventListener("dragover", (e) => {
-      e.preventDefault();
-      showDropHint(zoneEl, e.clientX, zoneKey);
-    });
+  resetBtn?.addEventListener("click", () => {
+    zoneState.pool = [...DEFAULT_ZONES.pool];
+    zoneState.info = [...DEFAULT_ZONES.info];
+    zoneState.center = [...DEFAULT_ZONES.center];
+    zoneState.table = [...DEFAULT_ZONES.table];
+    zoneState.hidden = [...DEFAULT_ZONES.hidden];
 
-    zoneEl.addEventListener("drop", (e) => {
-      e.preventDefault();
-      const metricId = e.dataTransfer?.getData("text/plain") || draggingPillId;
-      if (!metricId) return;
-
-      // If metricId is fixed or not exists, ignore
-      if (!METRICS.some(m => m.id === metricId)) return;
-
-      moveMetricToZone(metricId, zoneKey, e.clientX, zoneEl);
-      clearDropHints();
-      renderPills();
-    });
-  }
-
-  function clearDropHints() {
-    document.querySelectorAll(".metric-pill.drop-hint").forEach(el => el.classList.remove("drop-hint"));
-  }
-
-  function showDropHint(zoneEl, clientX, zoneKey) {
-    clearDropHints();
-    const pills = [...zoneEl.querySelectorAll(".metric-pill")];
-    if (pills.length === 0) return;
-
-    // find closest pill by x center
-    let target = null;
-    let best = Infinity;
-    for (const p of pills) {
-      const r = p.getBoundingClientRect();
-      const c = r.left + r.width / 2;
-      const d = Math.abs(clientX - c);
-      if (d < best) { best = d; target = p; }
-    }
-    if (target) target.classList.add("drop-hint");
-  }
-
-  function moveMetricToZone(metricId, toZoneKey, clientX, zoneEl) {
-    // remove from all zones
-    ["pool", "center", "table", "hidden"].forEach(k => {
-      layout[k] = layout[k].filter(id => id !== metricId);
-    });
-
-    // insert in position based on drop hint
-    const arr = layout[toZoneKey];
-    const pills = [...zoneEl.querySelectorAll(".metric-pill")].filter(p => p.dataset.metricId !== metricId);
-    let insertIndex = arr.length;
-
-    const hinted = zoneEl.querySelector(".metric-pill.drop-hint");
-    if (hinted) {
-      const hintedId = hinted.dataset.metricId;
-      const idx = arr.indexOf(hintedId);
-      if (idx >= 0) {
-        const r = hinted.getBoundingClientRect();
-        const before = clientX < (r.left + r.width / 2);
-        insertIndex = before ? idx : idx + 1;
-      }
-    }
-    arr.splice(insertIndex, 0, metricId);
-  }
-
-  /* -----------------------------
-     Sort controls
-  ----------------------------- */
-  function renderSortControls() {
-    sortControls.innerHTML = "";
-    if (sortRules.length === 0) {
-      sortRules = [{ metricId: layout.center[0] || "", dir: "desc" }].filter(r => r.metricId);
-    }
-
-    sortRules.forEach((rule, idx) => {
-      const row = document.createElement("div");
-      row.className = "sort-row";
-
-      const sel = document.createElement("select");
-      sel.className = "sort-metric";
-      const allowed = layout.center; // only center metrics
-      const optEmpty = document.createElement("option");
-      optEmpty.value = "";
-      optEmpty.textContent = "指標を選択";
-      sel.appendChild(optEmpty);
-
-      allowed.forEach(id => {
-        const m = METRICS.find(x => x.id === id);
-        const op = document.createElement("option");
-        op.value = id;
-        op.textContent = m?.label || id;
-        if (id === rule.metricId) op.selected = true;
-        sel.appendChild(op);
-      });
-
-      const dir = document.createElement("select");
-      dir.className = "sort-dir";
-      dir.innerHTML = `
-        <option value="desc">高い順</option>
-        <option value="asc">低い順</option>
-      `;
-      dir.value = rule.dir;
-
-      const del = document.createElement("button");
-      del.type = "button";
-      del.textContent = "削除";
-      del.addEventListener("click", () => {
-        sortRules.splice(idx, 1);
-        renderSortControls();
-      });
-
-      sel.addEventListener("change", () => {
-        rule.metricId = sel.value;
-      });
-      dir.addEventListener("change", () => {
-        rule.dir = dir.value;
-      });
-
-      row.appendChild(sel);
-      row.appendChild(dir);
-      row.appendChild(del);
-      sortControls.appendChild(row);
-    });
-  }
-
-  function applySort() {
-    // Only sort by valid rules
-    const rules = sortRules
-      .filter(r => r.metricId && layout.center.includes(r.metricId))
-      .map(r => ({ ...r }));
-
-    if (rules.length === 0) return;
-
-    const cards = [...itemsContainer.querySelectorAll(".product-card")];
-    const data = getData();
-
-    cards.sort((a, b) => {
-      const asinA = a.dataset.asin;
-      const asinB = b.dataset.asin;
-      const dA = data[asinA];
-      const dB = data[asinB];
-
-      for (const r of rules) {
-        const m = METRICS.find(x => x.id === r.metricId);
-        if (!m) continue;
-
-        const vA = m.parse(m.getValue(dA), dA);
-        const vB = m.parse(m.getValue(dB), dB);
-
-        const aNaN = Number.isNaN(vA);
-        const bNaN = Number.isNaN(vB);
-
-        if (aNaN && bNaN) continue;
-        if (aNaN && !bNaN) return 1;
-        if (!aNaN && bNaN) return -1;
-
-        if (vA === vB) continue;
-        const cmp = vA > vB ? 1 : -1;
-        return r.dir === "asc" ? cmp : -cmp;
-      }
-      return 0;
-    });
-
-    // re-append in new order
-    const frag = document.createDocumentFragment();
-    cards.forEach(c => frag.appendChild(c));
-    itemsContainer.appendChild(frag);
-  }
-
-  function clearSort() {
     sortRules = [];
     renderSortControls();
-  }
+    renderTopZones();
+    rerenderAllCards();
+  });
 
-  /* -----------------------------
-     ASIN Catalog
-  ----------------------------- */
-  function renderAsinCatalog() {
-    const data = getData();
-    asinCatalog.innerHTML = "";
-
-    const asins = Object.keys(data);
-    if (headerStatus) {
-      headerStatus.textContent = `データASIN数: ${asins.length}`;
-    }
-
-    asins.forEach(asin => {
-      const pill = document.createElement("span");
-      pill.textContent = asin;
-      pill.title = "クリックして表示";
-
-      pill.addEventListener("click", () => {
-        addOrFocusCard(asin);
-      });
-
-      asinCatalog.appendChild(pill);
+  clearCardsBtn?.addEventListener("click", () => {
+    cardState.forEach((v) => {
+      if (v.chart) v.chart.destroy();
+      v.el.remove();
     });
+    cardState.clear();
+    itemsContainer.innerHTML = "";
+    emptyState.style.display = "block";
+    updateHeaderStatus();
+  });
+
+  clearCartBtn?.addEventListener("click", () => {
+    cart.clear();
+    updateCartSummary();
+  });
+}
+
+function initCatalog() {
+  const asins = Object.keys(window.ASIN_DATA || {});
+  asinCatalog.innerHTML = "";
+  asins.forEach((asin) => {
+    const b = document.createElement("button");
+    b.className = "asin-pill";
+    b.type = "button";
+    b.textContent = asin;
+    b.addEventListener("click", () => addOrFocusCard(asin));
+    asinCatalog.appendChild(b);
+  });
+}
+
+function addOrFocusCard(asin) {
+  const data = (window.ASIN_DATA || {})[asin];
+  if (!data) return alert("データがありません: " + asin);
+
+  if (cardState.has(asin)) {
+    cardState.get(asin).el.scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
   }
 
-  /* -----------------------------
-     Card Rendering
-  ----------------------------- */
-  function addOrFocusCard(asin) {
-    const data = getData()[asin];
-    if (!data) return;
+  const card = createProductCard(asin, data);
+  itemsContainer.appendChild(card);
 
-    emptyState.style.display = "none";
+  emptyState.style.display = "none";
+  cardState.set(asin, { el: card, data, chart: card.__chart || null });
 
-    if (CARDS.has(asin)) {
-      CARDS.get(asin).root.scrollIntoView({ behavior: "smooth", block: "start" });
-      return;
+  updateHeaderStatus();
+}
+
+function updateHeaderStatus() {
+  const count = cardState.size;
+  if (headerStatus) headerStatus.textContent = count ? `表示中: ${count} ASIN` : "";
+}
+
+/* =========================
+   上部5枠：レンダリング
+========================= */
+function renderTopZones() {
+  zonePool.innerHTML = "";
+  zoneInfo.innerHTML = "";
+  zoneCenter.innerHTML = "";
+  zoneTable.innerHTML = "";
+  zoneHidden.innerHTML = "";
+
+  zoneState.pool.forEach((t) => zonePool.appendChild(makePill(t)));
+  zoneState.info.forEach((t) => zoneInfo.appendChild(makePill(t)));
+  zoneState.center.forEach((t) => zoneCenter.appendChild(makePill(t)));
+  zoneState.table.forEach((t) => zoneTable.appendChild(makePill(t)));
+  zoneState.hidden.forEach((t) => zoneHidden.appendChild(makePill(t)));
+
+  refreshSortRuleOptions();
+}
+
+function makePill(token) {
+  const pill = document.createElement("div");
+  pill.className = "metric-pill";
+  pill.draggable = true;
+  pill.dataset.token = token;
+  pill.textContent = labelOf(token);
+
+  pill.addEventListener("dragstart", (e) => {
+    e.dataTransfer.setData("text/plain", `item:${token}`);
+    e.dataTransfer.effectAllowed = "move";
+  });
+
+  return pill;
+}
+
+/* =========================
+   DnD（共通5枠）重複不可
+========================= */
+function attachZoneDnD(zoneEl, { zoneKey }) {
+  if (!zoneEl) return;
+
+  zoneEl.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  });
+
+  zoneEl.addEventListener("drop", (e) => {
+    e.preventDefault();
+    const raw = e.dataTransfer.getData("text/plain");
+    if (!raw) return;
+
+    // ★ここだけ修正（tokenに ":" が含まれるため split(":") で壊れる）
+    const first = raw.indexOf(":");
+    if (first < 0) return;
+    const kind = raw.slice(0, first);
+    const token = raw.slice(first + 1);
+    if (kind !== "item" || !token) return;
+
+    moveTokenToZone(token, zoneKey);
+    renderTopZones();
+    rerenderAllCards();
+  });
+}
+
+function moveTokenToZone(token, toZone) {
+  for (const z of ["pool", "info", "center", "table", "hidden"]) {
+    const idx = zoneState[z].indexOf(token);
+    if (idx >= 0) zoneState[z].splice(idx, 1);
+  }
+  zoneState[toZone].push(token);
+}
+
+/* =========================
+   Sort（真ん中枠：指標のみ対象）
+========================= */
+function initSortUI() {
+  sortRules = [];
+  renderSortControls();
+
+  addSortRuleBtn?.addEventListener("click", () => {
+    const firstMetric = zoneState.center.find((t) => parseToken(t).type === "M") || tokM(METRICS_ALL[0].id);
+    sortRules.push({ metricToken: firstMetric, order: "desc" });
+    renderSortControls();
+  });
+
+  applySortBtn?.addEventListener("click", () => applySort());
+  clearSortBtn?.addEventListener("click", () => {
+    sortRules = [];
+    renderSortControls();
+  });
+}
+
+function renderSortControls() {
+  if (!sortControls) return;
+  sortControls.innerHTML = "";
+
+  sortRules.forEach((r, idx) => {
+    const row = document.createElement("div");
+    row.className = "sort-row";
+
+    const metricOptions = zoneState.center
+      .filter((t) => parseToken(t).type === "M")
+      .map((t) => `<option value="${t}" ${t === r.metricToken ? "selected" : ""}>${labelOf(t)}</option>`)
+      .join("");
+
+    const selMetric = document.createElement("select");
+    selMetric.innerHTML = metricOptions || `<option value="${tokM(METRICS_ALL[0].id)}">${METRICS_ALL[0].label}</option>`;
+    selMetric.addEventListener("change", () => (r.metricToken = selMetric.value));
+
+    const selOrder = document.createElement("select");
+    selOrder.innerHTML = `
+      <option value="desc" ${r.order === "desc" ? "selected" : ""}>降順</option>
+      <option value="asc" ${r.order === "asc" ? "selected" : ""}>昇順</option>
+    `;
+    selOrder.addEventListener("change", () => (r.order = selOrder.value));
+
+    const del = document.createElement("button");
+    del.type = "button";
+    del.textContent = "削除";
+    del.addEventListener("click", () => {
+      sortRules.splice(idx, 1);
+      renderSortControls();
+    });
+
+    row.appendChild(selMetric);
+    row.appendChild(selOrder);
+    row.appendChild(del);
+    sortControls.appendChild(row);
+  });
+}
+
+function refreshSortRuleOptions() {
+  const centerMetrics = zoneState.center.filter((t) => parseToken(t).type === "M");
+  sortRules.forEach((r) => {
+    if (!centerMetrics.includes(r.metricToken)) {
+      r.metricToken = centerMetrics[0] || tokM(METRICS_ALL[0].id);
+    }
+  });
+  renderSortControls();
+}
+
+function applySort() {
+  if (sortRules.length === 0) return;
+
+  const entries = Array.from(cardState.entries());
+  const score = (data, metricToken) => {
+    const { id } = parseToken(metricToken);
+    const m = METRIC_BY_ID[id];
+    if (!m) return -Infinity;
+    const v = data[m.sourceKey];
+    if (v == null) return -Infinity;
+    const n = Number(String(v).trim().replace(/[^\d.\-]/g, ""));
+    return Number.isFinite(n) ? n : -Infinity;
+  };
+
+  entries.sort((a, b) => {
+    const da = a[1].data;
+    const db = b[1].data;
+
+    for (const r of sortRules) {
+      const va = score(da, r.metricToken);
+      const vb = score(db, r.metricToken);
+      if (va === vb) continue;
+      if (r.order === "asc") return va - vb;
+      return vb - va;
+    }
+    return 0;
+  });
+
+  entries.forEach(([_, v]) => itemsContainer.appendChild(v.el));
+}
+
+/* =========================
+   値の解決（token）
+========================= */
+function renderWarningTags(str) {
+  const s = (str || "").toString();
+  const parts = s.split(/[,\s、]+/).map((x) => x.trim()).filter(Boolean);
+  if (parts.length === 0) return "";
+
+  return parts
+    .map((p) => {
+      let cls = "tag";
+      if (p.includes("輸出不可") || p.includes("出荷禁止")) cls += " danger";
+      else if (p.includes("知財")) cls += " info";
+      else if (p.includes("大型")) cls += " warn";
+      return `<span class="${cls}">${p}</span>`;
+    })
+    .join("");
+}
+
+function resolveInfoValueById(id, ctx) {
+  const f = INFO_BY_ID[id];
+  if (!f) return { type: "text", text: "－" };
+
+  const { jpAsin, usAsin, size, weight, data } = ctx;
+
+  const computed = {
+    商品名: data["品名"] || "－",
+    各種ASIN: `日本: ${jpAsin} / US: ${usAsin}`,
+    サイズ: size,
+    "重量（容積重量）": weight,
+    カテゴリ: `${data["親カテゴリ"] || "－"} / ${data["サブカテゴリ"] || "－"}`,
+    注意事項: renderWarningTags(data["注意事項（警告系）"])
+  };
+
+  if (f.kind === "computedTags") return { type: "tags", html: computed[id] || "－" };
+  if (f.kind === "computed" || f.kind === "computedTitle") return { type: "text", text: computed[id] || "－" };
+
+  const sourceKey = f.sourceKey || f.id;
+  return { type: "text", text: data[sourceKey] ?? "－" };
+}
+
+function resolveTokenValue(token, ctx, data) {
+  const { type, id } = parseToken(token);
+
+  if (type === "M") {
+    const m = METRIC_BY_ID[id];
+    return { kind: "text", label: m?.label || id, text: data?.[m?.sourceKey] ?? "－" };
+  }
+
+  if (type === "I") {
+    const rv = resolveInfoValueById(id, ctx);
+    if (rv.type === "tags") return { kind: "tags", label: INFO_BY_ID[id]?.label || id, html: rv.html };
+    return { kind: "text", label: INFO_BY_ID[id]?.label || id, text: rv.text };
+  }
+
+  return { kind: "text", label: id, text: "－" };
+}
+
+/* =========================
+   商品情報描画
+========================= */
+function buildInfoGrid(container, ctx, data, tokens) {
+  if (!container) return;
+  container.innerHTML = "";
+
+  const list = tokens ?? zoneState.info;
+  if (!list || list.length === 0) {
+    container.style.display = "none";
+    return;
+  }
+  container.style.display = "grid";
+
+  list.forEach((tok) => {
+    const v = resolveTokenValue(tok, ctx, data);
+
+    const k = document.createElement("div");
+    k.className = "k";
+    k.textContent = v.label;
+
+    const val = document.createElement("div");
+    val.className = "v";
+
+    if (v.kind === "tags") {
+      val.classList.add("v-tags");
+      val.innerHTML = v.html;
+    } else {
+      val.textContent = v.text;
     }
 
-    const root = document.createElement("section");
-    root.className = "product-card card";
-    root.dataset.asin = asin;
+    container.appendChild(k);
+    container.appendChild(val);
+  });
+}
 
-    // Left fixed fields
-    const imageSrc = safeText(data["商品画像"], "");
-    const title = safeText(data["品名"], asin);
-    const brand = safeText(data["ブランド"]);
-    const rating = safeText(data["レビュー評価"]);
+function buildInfoGridSplit(containerA, containerB, ctx, data) {
+  const tokens = [...zoneState.info];
+  const mid = Math.ceil(tokens.length / 2);
+  const first = tokens.slice(0, mid);
+  const second = tokens.slice(mid);
 
-    const usAsin = safeText(data["アメリカASIN"] || asin);
-    const jpAsin = safeText(data["日本ASIN"]);
-    const jan = safeText(data["JAN"]);
-    const sku = safeText(data["SKU"]);
+  buildInfoGrid(containerA, ctx, data, first);
+  buildInfoGrid(containerB, ctx, data, second);
+}
 
-    const size = safeText(data["サイズ"]);
-    const weightKg = safeText(data["重量kg"]);
-    const volW = safeText(data["容積重量"]);
-    const material = safeText(data["材質"]);
-    const cat = `${safeText(data["親カテゴリ"])} / ${safeText(data["サブカテゴリ"])}`.replace(/^—\s\/\s—$/, "—");
+/* =========================
+   真ん中 / 下段
+========================= */
+function buildCenterList(container, ctx, data) {
+  if (!container) return;
+  container.innerHTML = "";
 
-    const warningRaw = safeText(data["注意事項（警告系）"] || data["注意事項"], "");
-    const warningTags = parseWarningTags(warningRaw);
+  zoneState.center.forEach((tok) => {
+    const v = resolveTokenValue(tok, ctx, data);
 
-    // Inputs initial
-    const initPriceUSD = parseNumberLike(data["販売額（ドル）"]);
-    const initCostJPY = parseNumberLike(data["仕入れ目安単価"]);
+    const row = document.createElement("div");
+    row.className = "metric-row";
+    row.innerHTML = `
+      <div class="label">${v.label}</div>
+      <div class="value">${v.kind === "tags" ? "" : (v.text ?? "－")}</div>
+    `;
 
-    // Middle metrics HTML will be injected based on layout.center
-    // Bottom table will be injected based on layout.table
+    if (v.kind === "tags") {
+      const valueEl = row.querySelector(".value");
+      valueEl.classList.add("v-tags");
+      valueEl.innerHTML = v.html;
+    }
 
-    root.innerHTML = `
-      <div class="summary-row">
-        <!-- LEFT -->
-        <div>
-          <div class="summary-left">
-            <div class="summary-image-box">
-              <img src="${escapeAttr(imageSrc)}" alt="" onerror="this.style.opacity=0.2;" />
-              <div class="qty-row">
-                <label class="inline-label">数量</label>
-                <select class="qty">
-                  ${[1,2,3,4,5,6,7,8,9,10].map(n=>`<option value="${n}">${n}</option>`).join("")}
-                </select>
-              </div>
+    container.appendChild(row);
+  });
+}
 
-              <div class="price-row">
-                <label class="inline-label">販売価格 ($)</label>
-                <input class="price" type="number" step="0.01" min="0" placeholder="例: 39.99" value="${isFinite(initPriceUSD)?initPriceUSD:""}" />
-              </div>
+function buildDetailTable(tableEl, ctx, data) {
+  if (!tableEl) return;
+  const theadRow = tableEl.querySelector("thead tr");
+  const tbodyRow = tableEl.querySelector("tbody tr");
+  theadRow.innerHTML = "";
+  tbodyRow.innerHTML = "";
 
-              <div class="cost-row">
-                <label class="inline-label">仕入れ額 (￥)</label>
-                <input class="cost" type="number" step="1" min="0" placeholder="例: 3700" value="${isFinite(initCostJPY)?initCostJPY:""}" />
-              </div>
+  zoneState.table.forEach((tok) => {
+    const v = resolveTokenValue(tok, ctx, data);
 
-              <button class="cart-btn" type="button">カートに入れる</button>
-            </div>
+    const th = document.createElement("th");
+    th.textContent = v.label;
+    theadRow.appendChild(th);
 
-            <div class="summary-basic">
-              <div class="summary-title">${escapeHtml(title)}</div>
+    const td = document.createElement("td");
+    td.className = "info-td";
 
-              <div class="basic-row"><div class="basic-label">ブランド</div><div class="basic-value">${escapeHtml(brand)}</div></div>
-              <div class="basic-row"><div class="basic-label">評価</div><div class="basic-value">${escapeHtml(rating)}</div></div>
-              <div class="basic-row"><div class="basic-label">ASIN</div><div class="basic-value">${escapeHtml(asin)}</div></div>
+    if (v.kind === "tags") {
+      td.classList.add("info-td-tags");
+      td.innerHTML = v.html;
+    } else {
+      const span = document.createElement("div");
+      span.className = "info-td-scroll";
+      span.textContent = v.text;
+      td.appendChild(span);
+    }
 
-              <div class="basic-row"><div class="basic-label">各種ASIN</div>
-                <div class="basic-value">日本: ${escapeHtml(jpAsin)} / US: ${escapeHtml(usAsin)}</div>
-              </div>
+    tbodyRow.appendChild(td);
+  });
+}
 
-              <div class="basic-row"><div class="basic-label">JAN</div><div class="basic-value">${escapeHtml(jan)}</div></div>
-              <div class="basic-row"><div class="basic-label">SKU</div><div class="basic-value">${escapeHtml(sku)}</div></div>
+function rerenderAllCards() {
+  const isThird = document.body.classList.contains("third-layout");
 
-              <div class="basic-row"><div class="basic-label">サイズ</div><div class="basic-value">${escapeHtml(size)}</div></div>
+  cardState.forEach((v) => {
+    const asin = v.el.dataset.asin;
+    const jpAsin = v.data["日本ASIN"] || "－";
+    const usAsin = v.data["アメリカASIN"] || asin || "－";
+    const realW = v.data["重量kg"] ?? v.data["重量（kg）"] ?? v.data["重量"] ?? "";
+    const volW = v.data["容積重量"] ?? "";
+    const size = v.data["サイズ"] || "－";
+    const weight = `${fmtKg(realW)}（${fmtKg(volW)}）`;
+    const ctx = { asin, jpAsin, usAsin, size, weight, data: v.data };
 
-              <div class="basic-row">
-                <div class="basic-label">重量（容積重量）</div>
-                <div class="basic-value">
-                  ${escapeHtml(weightKg)}kg（${escapeHtml(volW)}kg）
-                </div>
-              </div>
+    if (isThird) {
+      buildInfoGridSplit(
+        v.el.querySelector(".js-infoGridA"),
+        v.el.querySelector(".js-infoGridB"),
+        ctx,
+        v.data
+      );
+    } else {
+      buildInfoGrid(v.el.querySelector(".js-infoGrid"), ctx, v.data);
+    }
 
-              <div class="basic-row"><div class="basic-label">材質</div><div class="basic-value">${escapeHtml(material)}</div></div>
-              <div class="basic-row"><div class="basic-label">カテゴリ</div><div class="basic-value">${escapeHtml(cat)}</div></div>
+    buildCenterList(v.el.querySelector(".js-center"), ctx, v.data);
+    buildDetailTable(v.el.querySelector(".js-detailTable"), ctx, v.data);
+  });
+}
 
-              <div class="basic-row">
-                <div class="basic-label">注意事項</div>
-                <div class="basic-value">
-                  <div class="warning-tags">
-                    ${warningTags.length ? warningTags.map(t => renderWarningTag(t)).join("") : `<span class="muted">—</span>`}
-                  </div>
-                </div>
-              </div>
+/* =========================
+   チャート
+========================= */
+function renderChart(canvas) {
+  const labels = Array.from({ length: 180 }, (_, i) => `${180 - i}日`);
+  const rank = labels.map(() => 52000 + (Math.random() - 0.5) * 8000);
+  const sellers = labels.map(() => Math.max(1, Math.round(1 + Math.random() * 8)));
+  const price = labels.map(() => 22 + (Math.random() - 0.5) * 8);
 
-            </div>
+  const chart = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        { label: "ランキング", data: rank, yAxisID: "y", tension: 0.25 },
+        { label: "セラー数", data: sellers, yAxisID: "y1", tension: 0.25 },
+        { label: "価格(USD)", data: price, yAxisID: "y2", tension: 0.25 }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: { legend: { display: true } },
+      scales: {
+        y: { position: "left" },
+        y1: { position: "right", grid: { drawOnChartArea: false } },
+        y2: { position: "right", grid: { drawOnChartArea: false } }
+      }
+    }
+  });
+
+  return chart;
+}
+
+function updateChartVisibility(chart, showDS, showSP) {
+  chart.data.datasets.forEach((ds) => {
+    if (ds.label === "ランキング") ds.hidden = !showDS;
+    if (ds.label === "セラー数") ds.hidden = !(showDS || showSP);
+    if (ds.label === "価格(USD)") ds.hidden = !showSP;
+  });
+  chart.update();
+}
+
+/* =========================
+   カート
+========================= */
+function updateCartSummary() {
+  let totalCost = 0;
+  let totalRevenueJPY = 0;
+  let asinCount = cart.size;
+  let itemCount = 0;
+
+  cart.forEach((v) => {
+    const qty = Math.max(1, Number(v.qty || 1));
+    const sellUSD = Number(v.sellUSD || 0);
+    const costJPY = Number(v.costJPY || 0);
+
+    itemCount += qty;
+    totalCost += costJPY * qty;
+    totalRevenueJPY += sellUSD * FX_RATE * qty;
+  });
+
+  const profit = totalRevenueJPY - totalCost;
+
+  cartTotalCost.textContent = fmtJPY(totalCost);
+  cartTotalRevenue.textContent = fmtJPY(totalRevenueJPY);
+  cartTotalProfit.textContent = fmtJPY(profit);
+  cartAsinCount.textContent = String(asinCount);
+  cartItemCount.textContent = String(itemCount);
+}
+
+/* =========================
+   カード生成
+========================= */
+function createProductCard(asin, data) {
+  const card = document.createElement("section");
+  card.className = "product-card card";
+  card.dataset.asin = asin;
+
+  const isAltLayout = document.body.classList.contains("alt-layout");
+  const isThirdLayout = document.body.classList.contains("third-layout");
+
+  if (isThirdLayout) {
+    card.innerHTML = `
+      <div class="card-top">
+        <div class="title">ASIN: ${asin}</div>
+        <button class="remove" type="button">この行を削除</button>
+      </div>
+
+      <div class="layout3-grid">
+        <!-- 商品画像 -->
+        <div class="l3-image l3-block">
+          <div class="head">商品画像</div>
+          <div class="image-box">
+            <img src="${data["商品画像"] || ""}" alt="商品画像" onerror="this.style.display='none';" />
           </div>
         </div>
 
-        <!-- CENTER -->
-        <div class="center-card">
-          <div class="card-title">主要指標</div>
-          <div class="center-metrics" data-role="centerMetrics"></div>
-          <div class="small-note">※ 値はダミーデータ（実運用はAPI/シート連携）</div>
+        <!-- 商品情報① -->
+        <div class="l3-infoA l3-block">
+          <div class="head">商品情報①</div>
+          <div class="info-grid js-infoGridA"></div>
         </div>
 
-        <!-- RIGHT / GRAPH -->
-        <div class="graph-card">
-          <div class="graph-head">
-            <div class="graph-title">グラフ（180日）</div>
-            <div class="graph-mode">
-              <button type="button" class="mode-btn active" data-mode="mes">MES-AI-A</button>
-              <button type="button" class="mode-btn" data-mode="keepa">Keepa</button>
-            </div>
+        <!-- 商品情報② -->
+        <div class="l3-infoB l3-block">
+          <div class="head">商品情報②</div>
+          <div class="info-grid js-infoGridB"></div>
+        </div>
+
+        <!-- 主要項目 -->
+        <div class="l3-center l3-block">
+          <div class="head">主要項目</div>
+          <div class="center-list js-center"></div>
+        </div>
+
+        <!-- カート（右縦） -->
+        <div class="l3-buy">
+          <div class="buy-title">数量</div>
+          <select class="js-qty">
+            <option value="1" selected>1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+          </select>
+
+          <div class="buy-title" style="margin-top:10px;">販売価格（$）</div>
+          <input class="js-sell" type="number" step="0.01" placeholder="例: 39.99" />
+
+          <div class="buy-title" style="margin-top:10px;">仕入れ額（￥）</div>
+          <input class="js-cost" type="number" step="1" placeholder="例: 3700" />
+
+          <button class="cart-btn js-addCart" type="button" style="margin-top:12px;">カートに入れる</button>
+        </div>
+
+        <!-- keepa（小） -->
+        <div class="l3-keepa l3-block">
+          <div class="head">keepaグラフ</div>
+          <div class="keepa-mini">
+            <iframe class="js-keepaFrame" src="" loading="lazy"></iframe>
+          </div>
+        </div>
+
+        <!-- 需要供給（大） -->
+        <div class="l3-mes l3-block">
+          <div class="head">需要供給グラフ（180日）</div>
+
+          <div class="graph-options js-graphOptions" style="margin-bottom:10px;">
+            <label><input type="checkbox" class="js-chkDS" checked />《需要＆供給》</label>
+            <label><input type="checkbox" class="js-chkSP" />《供給＆価格》</label>
           </div>
 
-          <div class="graph-controls">
-            <label class="check-pill">
-              <input class="line-check" type="checkbox" data-set="rankSeller" checked />
-              《需要＆供給》
-            </label>
-            <label class="check-pill">
-              <input class="line-check" type="checkbox" data-set="sellerPrice" />
-              《供給＆価格》
-            </label>
-          </div>
-
-          <div class="graph-body">
-            <canvas class="graph-canvas"></canvas>
-            <div class="keepa-holder" style="display:none;">
-              <div class="keepa-box">
-                <div class="keepa-text">Keepa表示（外部）</div>
-                <a class="keepa-link" target="_blank" rel="noreferrer">Keepaで開く</a>
-              </div>
-            </div>
-          </div>
-
-          <div class="graph-foot">
-            表示切替で MES-AI-A / Keepa を切替できます（MES側はチェックで線を切替）
+          <div class="mes-big">
+            <canvas class="js-chart"></canvas>
           </div>
         </div>
       </div>
 
-      <!-- BOTTOM TABLE (per ASIN) -->
       <div class="detail-wrap">
+        <div class="detail-head"><div class="t">その他項目</div></div>
         <div class="detail-scroll">
-          <table class="detail-table" data-role="detailTable">
+          <table class="detail-table js-detailTable">
             <thead><tr></tr></thead>
             <tbody><tr></tr></tbody>
           </table>
         </div>
       </div>
     `;
+  } else {
+    // 既存：alt / 通常
+    card.innerHTML = isAltLayout
+      ? `
+      <div class="card-top">
+        <div class="title">ASIN: ${asin}</div>
+        <button class="remove" type="button">この行を削除</button>
+      </div>
 
-    itemsContainer.appendChild(root);
+      <div class="alt-grid">
+        <div class="alt-left">
+          <div class="alt-image image-box">
+            <img src="${data["商品画像"] || ""}" alt="商品画像" onerror="this.style.display='none';" />
+          </div>
 
-    // wire card
-    const qtyEl = root.querySelector(".qty");
-    const priceEl = root.querySelector(".price");
-    const costEl = root.querySelector(".cost");
-    const cartBtn = root.querySelector(".cart-btn");
+          <div class="alt-info info-box">
+            <div class="info-grid js-infoGrid"></div>
+          </div>
+        </div>
 
-    const canvas = root.querySelector(".graph-canvas");
-    const keepaHolder = root.querySelector(".keepa-holder");
-    const keepaLink = root.querySelector(".keepa-link");
-    const modeBtns = [...root.querySelectorAll(".mode-btn")];
-    const checks = [...root.querySelectorAll(".line-check")];
+        <div class="alt-center center-box">
+          <div class="center-head">主要項目</div>
+          <div class="center-list js-center"></div>
+        </div>
 
-    // Keepa link
-    const keepaUrl = data["Keepaリンク"];
-    if (keepaUrl) keepaLink.href = keepaUrl;
+        <div class="alt-graph graph-box">
+          <div class="graph-head">
+            <div class="graph-title">グラフ（180日）</div>
+          </div>
 
-    // create chart
-    const chart = buildMesChart(canvas, data);
+          <div class="graph-options js-graphOptions">
+            <label><input type="checkbox" class="js-chkDS" checked />《需要＆供給》</label>
+            <label><input type="checkbox" class="js-chkSP" />《供給＆価格》</label>
+          </div>
 
-    // mode switching
-    let graphMode = "mes";
-    function setMode(mode) {
-      graphMode = mode;
-      modeBtns.forEach(b => b.classList.toggle("active", b.dataset.mode === mode));
-      if (mode === "keepa") {
-        canvas.style.display = "none";
-        keepaHolder.style.display = "";
-      } else {
-        keepaHolder.style.display = "none";
-        canvas.style.display = "";
-        // ensure chart is resized
-        chart?.resize();
-      }
-    }
-    modeBtns.forEach(btn => {
-      btn.addEventListener("click", () => setMode(btn.dataset.mode));
-    });
+          <div class="graph-body">
+            <div class="keepa-wrap js-keepaWrap">
+              <iframe class="js-keepaFrame" src="" loading="lazy"></iframe>
+            </div>
 
-    // line set check logic:
-    // - rankSeller: show ranking + seller
-    // - sellerPrice: show seller + price
-    // if both checked: show all 3
-    function applyLineVisibility() {
-      const rankSeller = root.querySelector('input[data-set="rankSeller"]').checked;
-      const sellerPrice = root.querySelector('input[data-set="sellerPrice"]').checked;
+            <div class="canvas-wrap js-mesWrap">
+              <canvas class="js-chart"></canvas>
+            </div>
+          </div>
+        </div>
 
-      const showRank = rankSeller;
-      const showSeller = rankSeller || sellerPrice;
-      const showPrice = sellerPrice;
+        <div class="alt-buy buy-box">
+          <div class="buy-title">数量</div>
+          <select class="js-qty">
+            <option value="1" selected>1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+          </select>
 
-      setDatasetVisible(chart, "rank", showRank);
-      setDatasetVisible(chart, "seller", showSeller);
-      setDatasetVisible(chart, "price", showPrice);
+          <div class="buy-title">販売価格（$）</div>
+          <input class="js-sell" type="number" step="0.01" placeholder="例: 39.99" />
 
-      chart.update("none");
-    }
-    checks.forEach(c => c.addEventListener("change", applyLineVisibility));
-    applyLineVisibility();
+          <div class="buy-title">仕入れ額（￥）</div>
+          <input class="js-cost" type="number" step="1" placeholder="例: 3700" />
 
-    // cart add
-    cartBtn.addEventListener("click", () => {
-      const qty = Number(qtyEl.value || 1);
-      const priceUSD = Number(priceEl.value || 0);
-      const costJPY = Number(costEl.value || 0);
+          <button class="cart-btn js-addCart" type="button">カートに入れる</button>
+        </div>
+      </div>
 
-      CART.set(asin, { qty, priceUSD, costJPY });
-      updateCartSummary();
-      flash(cartBtn);
-    });
+      <div class="detail-wrap">
+        <div class="detail-head"><div class="t">その他項目</div></div>
+        <div class="detail-scroll">
+          <table class="detail-table js-detailTable">
+            <thead><tr></tr></thead>
+            <tbody><tr></tr></tbody>
+          </table>
+        </div>
+      </div>
+    `
+      : `
+      <div class="card-top">
+        <div class="title">ASIN: ${asin}</div>
+        <button class="remove" type="button">この行を削除</button>
+      </div>
 
-    // Save card state
-    CARDS.set(asin, {
-      root,
-      chart,
-      mode: graphMode,
-      checks,
-      inputs: { qtyEl, priceEl, costEl },
-      data,
-    });
+      <div class="summary-row">
+        <div class="left-wrap">
+          <div class="image-box">
+            <img src="${data["商品画像"] || ""}" alt="商品画像" onerror="this.style.display='none';" />
 
-    // Render center metrics and table columns based on current layout
-    renderCardCenter(asin);
-    renderCardTable(asin);
+            <div class="field">
+              <label>数量</label>
+              <select class="js-qty">
+                <option value="1" selected>1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+              </select>
 
-    // scroll focus
-    root.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
+              <label>販売価格（$）</label>
+              <input class="js-sell" type="number" step="0.01" placeholder="例: 39.99" />
 
-  function renderCardCenter(asin) {
-    const card = CARDS.get(asin);
-    if (!card) return;
+              <label>仕入れ額（￥）</label>
+              <input class="js-cost" type="number" step="1" placeholder="例: 3700" />
 
-    const wrap = card.root.querySelector('[data-role="centerMetrics"]');
-    wrap.innerHTML = "";
+              <button class="cart-btn js-addCart" type="button">カートに入れる</button>
+            </div>
+          </div>
 
-    layout.center.forEach(id => {
-      const m = METRICS.find(x => x.id === id);
-      if (!m) return;
-      const raw = m.getValue(card.data);
-      const val = m.format(raw, card.data);
+          <div class="info-box">
+            <div class="info-grid js-infoGrid"></div>
+          </div>
+        </div>
 
-      const row = document.createElement("div");
-      row.className = "center-row";
+        <div class="center-box">
+          <div class="center-head">主要項目</div>
+          <div class="center-list js-center"></div>
+        </div>
 
-      const label = document.createElement("div");
-      label.className = "center-row-label";
-      label.textContent = m.label;
+        <div class="graph-box">
+          <div class="graph-head">
+            <div class="graph-title">グラフ（180日）</div>
+            <div class="switch">
+              <button type="button" class="js-btnMes active">MES-AI-A</button>
+              <button type="button" class="js-btnKeepa">Keepa</button>
+            </div>
+          </div>
 
-      const value = document.createElement("div");
-      value.className = "center-row-value";
+          <div class="graph-options js-graphOptions">
+            <label><input type="checkbox" class="js-chkDS" checked />《需要＆供給》</label>
+            <label><input type="checkbox" class="js-chkSP" />《供給＆価格》</label>
+          </div>
 
-      // 日本最安値 tooltip
-      if (m.id === "jpLowest" && typeof m.tooltip === "function") {
-        value.classList.add("has-tip");
-        value.dataset.tip = m.tooltip(card.data);
-      }
-      value.textContent = val;
+          <div class="graph-body">
+            <div class="canvas-wrap js-mesWrap">
+              <canvas class="js-chart"></canvas>
+            </div>
+            <div class="keepa-wrap js-keepaWrap" style="display:none;">
+              <iframe class="js-keepaFrame" src="" loading="lazy"></iframe>
+            </div>
+          </div>
+        </div>
+      </div>
 
-      row.appendChild(label);
-      row.appendChild(value);
-      wrap.appendChild(row);
-    });
-  }
-
-  function renderCardTable(asin) {
-    const card = CARDS.get(asin);
-    if (!card) return;
-
-    const table = card.root.querySelector('[data-role="detailTable"]');
-    const trH = table.querySelector("thead tr");
-    const trB = table.querySelector("tbody tr");
-    trH.innerHTML = "";
-    trB.innerHTML = "";
-
-    layout.table.forEach(id => {
-      const m = METRICS.find(x => x.id === id);
-      if (!m) return;
-
-      const th = document.createElement("th");
-      th.textContent = m.label;
-
-      const td = document.createElement("td");
-      const raw = m.getValue(card.data);
-      td.textContent = m.format(raw, card.data);
-
-      // 日本最安値 tooltip
-      if (m.id === "jpLowest" && typeof m.tooltip === "function") {
-        td.classList.add("has-tip");
-        td.dataset.tip = m.tooltip(card.data);
-      }
-
-      trH.appendChild(th);
-      trB.appendChild(td);
-    });
-  }
-
-  function refreshAllCards() {
-    for (const asin of CARDS.keys()) {
-      renderCardCenter(asin);
-      renderCardTable(asin);
-    }
-    // Also refresh sort rule dropdown options since center metrics may change
-    renderSortControls();
-  }
-
-  /* -----------------------------
-     Chart (MES-AI-A)
-     - 180 points dummy from base values
-     - datasets: ranking (left), seller (right), price (right2)
-  ----------------------------- */
-  function buildMesChart(canvas, data) {
-    const labels = Array.from({ length: 180 }, (_, i) => `${i}日前`);
-
-    // base seeds
-    const baseRank = clamp(parseNumberLike(data["ランキング"]) || 60000, 1000, 250000);
-    const baseSeller = clamp(parseNumberLike(data["セラー数"]) || 4, 0, 50);
-    const basePrice = clamp(parseNumberLike(data["販売額（ドル）"]) || 40, 1, 500);
-
-    const rankSeries = randomWalk(180, baseRank, baseRank * 0.03, 2000, 180000);
-    const sellerSeries = randomWalk(180, baseSeller, 0.12, 0, 20);
-    const priceSeries = randomWalk(180, basePrice, 0.35, 5, 150);
-
-    const ctx = canvas.getContext("2d");
-
-    const chart = new Chart(ctx, {
-      type: "line",
-      data: {
-        labels,
-        datasets: [
-          {
-            label: "ランキング（小さいほど上位）",
-            data: rankSeries,
-            borderWidth: 4,
-            pointRadius: 0,
-            tension: 0.25,
-            yAxisID: "yRank",
-            parsing: false,
-            // color not specified per your preference? Chart.js defaults vary; leave it default.
-          },
-          {
-            label: "セラー数",
-            data: sellerSeries,
-            borderWidth: 4,
-            pointRadius: 0,
-            tension: 0.25,
-            yAxisID: "ySeller",
-            parsing: false,
-          },
-          {
-            label: "価格（USD）",
-            data: priceSeries,
-            borderWidth: 4,
-            pointRadius: 0,
-            tension: 0.25,
-            yAxisID: "yPrice",
-            parsing: false,
-          },
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: false,
-        plugins: {
-          legend: {
-            labels: { boxWidth: 18, font: { size: 10 } }
-          },
-          tooltip: {
-            enabled: true,
-            mode: "index",
-            intersect: false,
-            callbacks: {
-              label: (ctx) => {
-                const label = ctx.dataset.label || "";
-                const v = ctx.parsed.y;
-                if (label.includes("価格")) return `${label}: ${usd(v)}`;
-                if (label.includes("セラー")) return `${label}: ${v.toFixed(1)}`;
-                return `${label}: ${Math.round(v).toLocaleString("ja-JP")}`;
-              }
-            }
-          }
-        },
-        interaction: { mode: "index", intersect: false },
-        scales: {
-          x: {
-            ticks: { maxTicksLimit: 10, font: { size: 10 } }
-          },
-          yRank: {
-            position: "left",
-            reverse: true,
-            ticks: { font: { size: 10 } }
-          },
-          ySeller: {
-            position: "right",
-            grid: { drawOnChartArea: false },
-            ticks: { font: { size: 10 } }
-          },
-          yPrice: {
-            position: "right",
-            grid: { drawOnChartArea: false },
-            ticks: { font: { size: 10 } }
-          }
-        }
-      }
-    });
-
-    // add keys to datasets for visibility control
-    chart.data.datasets[0].__key = "rank";
-    chart.data.datasets[1].__key = "seller";
-    chart.data.datasets[2].__key = "price";
-
-    return chart;
-  }
-
-  function setDatasetVisible(chart, key, visible) {
-    if (!chart) return;
-    const ds = chart.data.datasets.find(d => d.__key === key);
-    if (!ds) return;
-    ds.hidden = !visible;
-  }
-
-  function clamp(v, min, max) {
-    if (!isFinite(v)) return min;
-    return Math.max(min, Math.min(max, v));
-  }
-
-  function randomWalk(n, start, step, min, max) {
-    const arr = new Array(n);
-    let x = start;
-    for (let i = 0; i < n; i++) {
-      const delta = (Math.random() - 0.5) * 2 * step;
-      x = clamp(x + delta, min, max);
-      // small mean reversion
-      x = x * 0.995 + start * 0.005;
-      arr[i] = x;
-    }
-    return arr;
-  }
-
-  /* -----------------------------
-     Warning tags
-  ----------------------------- */
-  const WARNING_COLOR = {
-    "輸出不可": "warning-export-ban",
-    "知財": "warning-ip",
-    "大型": "warning-large",
-    "出荷禁止": "warning-ship-ban",
-    "承認要": "warning-need-approve",
-    "バリエーション": "warning-variation",
-  };
-
-  function parseWarningTags(raw) {
-    if (!raw) return [];
-    // split by comma or spaces
-    const tokens = raw
-      .replace(/　/g, " ")
-      .split(/[,、\n ]+/)
-      .map(s => s.trim())
-      .filter(Boolean);
-
-    // normalize a few patterns
-    return tokens.map(t => {
-      if (t.includes("輸出")) return "輸出不可";
-      if (t.includes("知財")) return "知財";
-      if (t.includes("大型")) return "大型";
-      if (t.includes("出荷")) return "出荷禁止";
-      if (t.includes("承認")) return "承認要";
-      if (t.includes("バリエ")) return "バリエーション";
-      return t;
-    });
-  }
-
-  function renderWarningTag(tag) {
-    const cls = WARNING_COLOR[tag] || "warning-generic";
-    return `<span class="warning-tag ${cls}">${escapeHtml(tag)}</span>`;
-  }
-
-  /* -----------------------------
-     Cart summary
-  ----------------------------- */
-  function updateCartSummary() {
-    let totalCost = 0;
-    let totalRevenue = 0;
-    let asinCount = 0;
-    let itemCount = 0;
-
-    CART.forEach(v => {
-      asinCount += 1;
-      itemCount += Number(v.qty || 0);
-
-      totalCost += Number(v.costJPY || 0) * Number(v.qty || 0);
-      totalRevenue += Number(v.priceUSD || 0) * FX * Number(v.qty || 0);
-    });
-
-    cartTotalCostEl.textContent = yen(totalCost);
-    cartTotalRevenueEl.textContent = yen(totalRevenue);
-    cartTotalProfitEl.textContent = yen(totalRevenue - totalCost);
-    cartAsinCountEl.textContent = String(asinCount);
-    cartItemCountEl.textContent = String(itemCount);
-  }
-
-  /* -----------------------------
-     Actions
-  ----------------------------- */
-  function clearCards() {
-    itemsContainer.innerHTML = "";
-    CARDS.clear();
-    emptyState.style.display = "";
-  }
-
-  function clearCart() {
-    CART.clear();
-    updateCartSummary();
-  }
-
-  function flash(btn) {
-    btn.style.transform = "scale(0.98)";
-    setTimeout(() => (btn.style.transform = ""), 120);
-  }
-
-  /* -----------------------------
-     CSS helpers for this file (minimal)
-     (Your styles.css already has tooltip, but we add classes needed for warning colors)
-  ----------------------------- */
-  function injectExtraCss() {
-    const css = `
-      .summary-title{font-weight:900;font-size:15px;margin-bottom:8px;}
-      .muted{color:#94a3b8;font-weight:800;}
-      .center-card,.graph-card{padding:12px;border:1px solid #e5e7eb;border-radius:14px;background:#fff;}
-      .card-title{font-weight:900;margin-bottom:10px;}
-      .center-metrics{display:flex;flex-direction:column;gap:6px;}
-      .center-row{display:flex;justify-content:space-between;gap:10px;}
-      .center-row-label{color:#64748b;font-weight:900;font-size:12px;white-space:nowrap;}
-      .center-row-value{font-weight:900;font-size:12px;white-space:nowrap;}
-      .small-note{margin-top:10px;font-size:11px;color:#f97316;font-weight:800;}
-      .graph-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
-      .graph-title{font-weight:900;color:#1d4ed8;}
-      .graph-mode{display:flex;gap:6px;}
-      .mode-btn{border:1px solid #c7d2fe;background:#eef2ff;border-radius:999px;padding:4px 10px;font-weight:900;font-size:12px;}
-      .mode-btn.active{background:#5b5cff;color:#fff;border-color:#5b5cff;}
-      .graph-controls{display:flex;gap:10px;align-items:center;justify-content:flex-end;margin-bottom:8px;}
-      .check-pill{display:flex;gap:6px;align-items:center;font-size:12px;font-weight:900;white-space:nowrap;}
-      .graph-body{height:240px;background:#e8f0ff;border-radius:12px;padding:10px;position:relative;}
-      .graph-canvas{width:100% !important;height:100% !important;}
-      .graph-foot{margin-top:8px;font-size:11px;color:#64748b;font-weight:800;}
-
-      .warning-tags{display:flex;gap:6px;flex-wrap:wrap;}
-      .warning-tag{border-radius:999px;padding:2px 10px;font-size:11px;font-weight:900;color:#fff;white-space:nowrap;}
-      .warning-export-ban{background:#ef4444;}
-      .warning-ip{background:#8b5cf6;}
-      .warning-large{background:#f97316;}
-      .warning-ship-ban{background:#0ea5e9;}
-      .warning-need-approve{background:#16a34a;}
-      .warning-variation{background:#a855f7;}
-      .warning-generic{background:#334155;}
-
-      .metric-pill.drop-hint{outline:2px solid #5b5cff;outline-offset:2px;}
-      .keepa-box{height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:8px;}
-      .keepa-text{font-weight:900;color:#0f172a;}
-      .keepa-link{font-weight:900;}
-      .inline-label{display:inline-block;min-width:90px;color:#64748b;font-weight:900;white-space:nowrap;}
-      .qty-row,.price-row,.cost-row{display:flex;gap:8px;align-items:center;flex-wrap:nowrap;}
-      .qty-row select,.price-row input,.cost-row input{flex:1;min-width:0;}
-      .summary-image-box{display:flex;flex-direction:column;gap:8px;}
-      .summary-image-box img{border-radius:12px;border:1px solid #e5e7eb;background:#fff;}
-      .basic-row{display:grid;grid-template-columns:120px 1fr;gap:10px;align-items:start;}
-      .basic-label{white-space:nowrap;}
-      .basic-value{font-weight:900;}
-      .detail-wrap{margin-top:10px;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;background:#fff;}
-      .detail-table th{background:#eef2ff;font-weight:900;}
-      .detail-table td{font-weight:900;}
+      <div class="detail-wrap">
+        <div class="detail-head"><div class="t">その他項目</div></div>
+        <div class="detail-scroll">
+          <table class="detail-table js-detailTable">
+            <thead><tr></tr></thead>
+            <tbody><tr></tr></tbody>
+          </table>
+        </div>
+      </div>
     `;
-    const style = document.createElement("style");
-    style.textContent = css;
-    document.head.appendChild(style);
   }
 
-  /* -----------------------------
-     Escape helpers
-  ----------------------------- */
-  function escapeHtml(s) {
-    return String(s ?? "")
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#39;");
-  }
-  function escapeAttr(s) {
-    return escapeHtml(s).replaceAll("\n", " ");
-  }
-
-  /* -----------------------------
-     Bind UI
-  ----------------------------- */
-  function bindUI() {
-    // collapse metrics bar
-    metricsCollapseBtn.addEventListener("click", () => {
-      metricsBar.classList.toggle("collapsed");
-      const collapsed = metricsBar.classList.contains("collapsed");
-      metricsCollapseBtn.textContent = collapsed ? "広げる" : "折りたたむ";
-    });
-
-    // reset layout
-    metricsResetBtn.addEventListener("click", () => {
-      resetLayout();
-      renderPills();
-    });
-
-    // clear cards
-    clearCardsBtn.addEventListener("click", () => {
-      clearCards();
-    });
-
-    // clear cart
-    clearCartBtn.addEventListener("click", () => {
-      clearCart();
-    });
-
-    // sort rules
-    addSortRuleBtn.addEventListener("click", () => {
-      const first = layout.center[0] || "";
-      sortRules.push({ metricId: first, dir: "desc" });
-      renderSortControls();
-    });
-
-    applySortBtn.addEventListener("click", () => {
-      applySort();
-    });
-
-    clearSortBtn.addEventListener("click", () => {
-      clearSort();
-    });
-
-    // zone drop
-    setupDropZone(zonePool, "pool");
-    setupDropZone(zoneCenter, "center");
-    setupDropZone(zoneTable, "table");
-    setupDropZone(zoneHidden, "hidden");
-  }
-
-  /* -----------------------------
-     Init
-  ----------------------------- */
-  function init() {
-    injectExtraCss();
-    resetLayout();
-    bindUI();
-    renderPills();
-    renderAsinCatalog();
-    updateCartSummary();
-
-    // Guard: If data missing, show message in header
-    const data = getData();
-    const count = Object.keys(data).length;
-    if (count === 0) {
-      headerStatus.textContent = "ASINデータが見つかりません（window.ASIN_DATA が未定義）";
+  // remove
+  card.querySelector(".remove").addEventListener("click", () => {
+    if (cart.has(asin)) {
+      cart.delete(asin);
+      updateCartSummary();
     }
+    if (card.__chart) card.__chart.destroy();
+    card.remove();
+    cardState.delete(asin);
+
+    if (cardState.size === 0) emptyState.style.display = "block";
+    updateHeaderStatus();
+  });
+
+  // inputs
+  const sellInput = card.querySelector(".js-sell");
+  const costInput = card.querySelector(".js-cost");
+
+  if (data["販売額（ドル）"]) {
+    const s = String(data["販売額（ドル）"]).replace(/[^\d.]/g, "");
+    if (s) sellInput.value = s;
+  }
+  if (data["仕入れ目安単価"]) {
+    const c = String(data["仕入れ目安単価"]).replace(/[^\d]/g, "");
+    if (c) costInput.value = c;
   }
 
-  document.addEventListener("DOMContentLoaded", init);
-})();
+  card.querySelector(".js-addCart").addEventListener("click", () => {
+    const qty = Math.max(1, Number(card.querySelector(".js-qty").value || 1));
+    const sellUSD = num(sellInput.value);
+    const costJPY = num(costInput.value);
+
+    if (sellUSD <= 0) return alert("販売価格（$）を入力してください");
+    if (costJPY <= 0) return alert("仕入れ額（￥）を入力してください");
+
+    cart.set(asin, { qty, sellUSD, costJPY });
+    updateCartSummary();
+  });
+
+  // ctx
+  const jpAsin = data["日本ASIN"] || "－";
+  const usAsin = data["アメリカASIN"] || asin;
+  const realW = data["重量kg"] ?? data["重量（kg）"] ?? data["重量"] ?? "";
+  const volW = data["容積重量"] ?? "";
+  const size = data["サイズ"] || "－";
+  const weight = `${fmtKg(realW)}（${fmtKg(volW)}）`;
+  const ctx = { asin, jpAsin, usAsin, size, weight, data };
+
+  // info
+  if (isThirdLayout) {
+    buildInfoGridSplit(card.querySelector(".js-infoGridA"), card.querySelector(".js-infoGridB"), ctx, data);
+  } else {
+    buildInfoGrid(card.querySelector(".js-infoGrid"), ctx, data);
+  }
+
+  // center / table
+  buildCenterList(card.querySelector(".js-center"), ctx, data);
+  buildDetailTable(card.querySelector(".js-detailTable"), ctx, data);
+
+  // chart
+  const canvas = card.querySelector(".js-chart");
+  const chart = renderChart(canvas);
+  card.__chart = chart;
+
+  const chkDS = card.querySelector(".js-chkDS");
+  const chkSP = card.querySelector(".js-chkSP");
+  const refreshVis = () => updateChartVisibility(chart, chkDS.checked, chkSP.checked);
+  chkDS?.addEventListener("change", refreshVis);
+  chkSP?.addEventListener("change", refreshVis);
+  updateChartVisibility(chart, true, false);
+
+  // keepa
+  const keepaFrame = card.querySelector(".js-keepaFrame");
+  if (keepaFrame) keepaFrame.src = `https://keepa.com/#!product/1-${asin}`;
+
+  // 通常レイアウトのみ：トグル維持
+  if (!isAltLayout && !isThirdLayout) {
+    const keepaWrap = card.querySelector(".js-keepaWrap");
+    const mesWrap = card.querySelector(".js-mesWrap");
+    const graphOptions = card.querySelector(".js-graphOptions");
+    const btnMes = card.querySelector(".js-btnMes");
+    const btnKeepa = card.querySelector(".js-btnKeepa");
+
+    function setMode(mode) {
+      if (mode === "MES") {
+        btnMes.classList.add("active");
+        btnKeepa.classList.remove("active");
+        graphOptions.style.display = "flex";
+        mesWrap.style.display = "block";
+        keepaWrap.style.display = "none";
+      } else {
+        btnKeepa.classList.add("active");
+        btnMes.classList.remove("active");
+        graphOptions.style.display = "none";
+        mesWrap.style.display = "none";
+        keepaWrap.style.display = "block";
+      }
+    }
+    btnMes.addEventListener("click", () => setMode("MES"));
+    btnKeepa.addEventListener("click", () => setMode("KEEPA"));
+    setMode("MES");
+  }
+
+  return card;
+}
