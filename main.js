@@ -3,6 +3,11 @@
  * - レイアウト3追加（body.third-layout）
  * - 商品情報は商品情報枠（zoneState.info）を上から半分ずつで
  *   商品情報①/商品情報②に分割表示（レイアウト3のみ）
+ *
+ * ★updateChart を「リアル寄り」に改修：
+ *   - 価格/セラー数：ほぼ横ばい＋たまに段差
+ *   - ランキング：日々ブレ＋時々スパイク
+ *   - ASINごとに固定（リロードしても同じ波形）
  **************************************************************/
 
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -1048,31 +1053,184 @@ function renderChart(canvas) {
   });
 }
 
+/**
+ * ★リアル寄り updateChart
+ * - 価格/セラー：ほぼ横ばい
+ * - ランキング：適度に動く + スパイク
+ * - ASINごとに固定の乱数シード
+ */
 function updateChart(chart, data, { mode }) {
   if (!chart) return;
 
-  // ダミー：ASIN_DATA 側のキーに合わせて拾う
   const days = 180;
   const labels = Array.from({ length: days }, (_, i) => `${days - i}`);
-
-  const rank = Array.from({ length: days }, () => Math.max(1, Math.round(Math.random() * 50000)));
-  const sellers = Array.from({ length: days }, () => Math.round(Math.random() * 40));
-  const price = Array.from({ length: days }, () => Math.round(10 + Math.random() * 60));
-
   chart.data.labels = labels;
 
+  // -----------------------------
+  // 1) ASINごとに固定の乱数（再読み込みしても同じ波形）
+  // -----------------------------
+  const seedFromString = (str) => {
+    let h = 2166136261;
+    for (let i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return (h >>> 0) || 1;
+  };
+
+  const mulberry32 = (a) => {
+    return function () {
+      let t = (a += 0x6d2b79f5);
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  };
+
+  const asin = data?.ASIN || "";
+  const rand = mulberry32(seedFromString(`${asin}-chart`));
+
+  const clamp = (x, min, max) => Math.min(max, Math.max(min, x));
+
+  // ざっくりスムージング（見た目を現実寄りに）
+  const smooth = (arr, w = 5) => {
+    const out = [];
+    for (let i = 0; i < arr.length; i++) {
+      let s = 0;
+      let c = 0;
+      for (let j = i - Math.floor(w / 2); j <= i + Math.floor(w / 2); j++) {
+        if (j >= 0 && j < arr.length) {
+          s += arr[j];
+          c++;
+        }
+      }
+      out.push(s / c);
+    }
+    return out;
+  };
+
+  // -----------------------------
+  // 2) 価格：ほぼ横ばい + たまに段差
+  // -----------------------------
+  const getBasePrice = () => {
+    const candidates = [
+      data["カートボックス価格"],
+      data["販売額（ドル）"],
+      data["FBA最安値"],
+      data["過去3月FBA最安値"],
+    ];
+    for (const c of candidates) {
+      const v = num(c);
+      if (v > 0) return v;
+    }
+    return 29.99;
+  };
+
+  const basePrice = getBasePrice();
+
+  // 段差イベント（0〜2回）
+  const priceStepEvents = [];
+  const eventCount = Math.floor(rand() * 3); // 0..2
+  for (let k = 0; k < eventCount; k++) {
+    const at = Math.floor(rand() * (days - 30)) + 10; // 10..days-20
+    const stepPct = rand() * 0.04 - 0.02; // -2%..+2%
+    priceStepEvents.push({ at, stepPct });
+  }
+  priceStepEvents.sort((a, b) => a.at - b.at);
+
+  const price = [];
+  let p = basePrice;
+
+  for (let i = 0; i < days; i++) {
+    for (const ev of priceStepEvents) {
+      if (ev.at === i) p = p * (1 + ev.stepPct);
+    }
+
+    // 日次の微小ノイズ（±0.2%）
+    const noise = rand() * 0.004 - 0.002;
+    p = p * (1 + noise);
+
+    // 過剰な動きを抑制（±10%に制限）
+    p = clamp(p, basePrice * 0.9, basePrice * 1.1);
+
+    price.push(Math.round(p * 100) / 100);
+  }
+
+  // -----------------------------
+  // 3) セラー数：ほぼ横ばい（±0〜2）+ たまに段差
+  // -----------------------------
+  let sBase = Math.floor(6 + rand() * 17); // 6..22
+  let sNow = sBase;
+
+  const sellerEvents = [];
+  const sEventCount = Math.floor(rand() * 3); // 0..2
+  for (let k = 0; k < sEventCount; k++) {
+    const at = Math.floor(rand() * (days - 30)) + 10;
+    const step = Math.round(rand() * 4 - 2); // -2..+2
+    sellerEvents.push({ at, step });
+  }
+  sellerEvents.sort((a, b) => a.at - b.at);
+
+  const sellers = [];
+  for (let i = 0; i < days; i++) {
+    for (const ev of sellerEvents) {
+      if (ev.at === i) sNow += ev.step;
+    }
+
+    // 毎日動かさず、たまに微調整（-1..+1）
+    if (rand() < 0.35) sNow += Math.round(rand() * 2 - 1);
+
+    sNow = clamp(sNow, 1, 60);
+    sellers.push(Math.round(sNow));
+  }
+  const sellersSm = smooth(sellers, 7).map((x) => Math.round(x));
+
+  // -----------------------------
+  // 4) ランキング：適度に動く + たまにスパイク
+  // -----------------------------
+  let rBase = Math.floor(800 + rand() * 20000);
+  let r = rBase;
+
+  const spikeCount = 2 + Math.floor(rand() * 5); // 2..6
+  const spikes = new Set();
+  for (let k = 0; k < spikeCount; k++) spikes.add(Math.floor(rand() * days));
+
+  const rank = [];
+  for (let i = 0; i < days; i++) {
+    // 実効±5%くらい（毎日ではなく確率で）
+    const dailyPct = rand() * 0.30 - 0.15;
+    if (rand() < 0.75) r = r * (1 + dailyPct * 0.35);
+
+    // スパイク：悪化(×1.8〜3.0) or 改善(×0.45〜0.80)
+    if (spikes.has(i)) {
+      const spike = rand() < 0.5 ? 1.8 + rand() * 1.2 : 0.45 + rand() * 0.35;
+      r = r * spike;
+    }
+
+    r = clamp(r, 1, 200000);
+    rank.push(Math.round(r));
+  }
+  const rankSm = smooth(rank, 5).map((x) => Math.round(x));
+
+  // -----------------------------
+  // 5) mode に応じてセット（既存仕様維持）
+  // -----------------------------
   if (mode === "SP") {
     chart.data.datasets[0].label = "セラー数";
-    chart.data.datasets[0].data = sellers;
+    chart.data.datasets[0].data = sellersSm;
+
     chart.data.datasets[1].label = "価格(USD)";
     chart.data.datasets[1].data = price;
+
     chart.data.datasets[2].label = "ランキング";
-    chart.data.datasets[2].data = rank;
+    chart.data.datasets[2].data = rankSm;
   } else {
     chart.data.datasets[0].label = "ランキング";
-    chart.data.datasets[0].data = rank;
+    chart.data.datasets[0].data = rankSm;
+
     chart.data.datasets[1].label = "セラー数";
-    chart.data.datasets[1].data = sellers;
+    chart.data.datasets[1].data = sellersSm;
+
     chart.data.datasets[2].label = "価格(USD)";
     chart.data.datasets[2].data = price;
   }
