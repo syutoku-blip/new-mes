@@ -1,14 +1,10 @@
 /**************************************************************
- * main.js
- * - レイアウト3追加（body.third-layout）
- * - レイアウト4追加（body.fourth-layout）
- * - 上部5枠（プール/商品情報/主要項目/下段/非）をDnDでカスタム
- * - グラフ：
- *    ✅《需要＆供給》 → ランキング(緑) + セラー数(紫)
- *    ✅《供給＆価格》 → セラー数(紫) + 価格(オレンジ)
- *    ✅両方ON         → ランキング + セラー数 + 価格（3つ）
- * - Keepa風に「価格/セラー数は変動小さめ」「ランキングは揺れ＋スパイク」に調整
- * - 軸ラベル/単位を明確化（X=日付、左=価格USD、右=ランキング、右2=セラー数）
+ * main.js（更新版）
+ * - グラフの疑似データ生成を「相関あり」に改善：
+ *   1) ランキング（需要）が上がる（＝数字は小さくなる）→ 価格は上がりやすい
+ *   2) セラー数（供給）が増える → 価格は下がりやすい
+ *   3) ランキングが下がる（＝数字が大きくなる）→ セラー数は減りやすい / 価格は上がりにくい
+ * - X軸（180日）の目盛りを見やすく：月境界＋約30日ごと＋最終日を表示
  **************************************************************/
 
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -18,11 +14,6 @@ const fmtJPY = (n) => "￥" + Number(n || 0).toLocaleString("ja-JP");
 const num = (v) => {
   const x = Number(String(v ?? "").replace(/[^\d.\-]/g, ""));
   return Number.isFinite(x) ? x : 0;
-};
-const fmtKg = (v) => {
-  const x = num(v);
-  if (!x) return "";
-  return x.toFixed(2) + "kg";
 };
 const fmtUSD = (v) => {
   const x = num(v);
@@ -123,11 +114,6 @@ const sourceKeyOf = (token) => tokenSourceMap.get(token) || token;
 
 /* =========================
    zoneState（共通5枠）
-   - pool: 未配置
-   - info: 商品情報
-   - center: 主要項目
-   - table: 下段
-   - hidden: 非表示
 ========================= */
 const zoneState = {
   pool: [],
@@ -143,7 +129,6 @@ function defaultZoneState() {
 
   zoneState.info = [...infoTokens];
 
-  // 仮の初期：主要項目に見せたいもの（必要なら自由に入替）
   zoneState.center = [
     tokM("粗利益"),
     tokM("粗利益率"),
@@ -152,7 +137,6 @@ function defaultZoneState() {
     tokM("予測30日販売数"),
   ].filter((t) => tokenLabelMap.has(t));
 
-  // 下段（テーブル）
   zoneState.table = [
     tokM("過去3月FBA最安値"),
     tokM("FBA最安値"),
@@ -205,23 +189,17 @@ const cartAvgMarginEl = $("#cartAvgMargin");
    状態
 ========================= */
 const activeAsins = new Set();
-const cardMap = new Map(); // asin -> element
+const cardMap = new Map();
 
-// 並び替えルール（単一）
-let sortColToken = ""; // token
+let sortColToken = "";
 let sortOrder = "desc";
 
-// 表示：keepa or mes (カード単位) ※ alt/通常の切替用
 const graphModeByAsin = new Map(); // asin -> "MES"|"KEEPA"
-
-// カート
 const cart = new Map(); // asin -> {qty, sell, cost}
 
 /* =========================
    初期化
 ========================= */
-let sortRules = [];
-
 init();
 
 function init() {
@@ -235,7 +213,6 @@ function init() {
 }
 
 function initPoolUI() {
-  // ページ側に存在する枠だけ初期化（layout4 などでDOM差異があっても壊れないように）
   if (zonePool) attachZoneDnD(zonePool, { zoneKey: "pool" });
   if (zoneInfo) attachZoneDnD(zoneInfo, { zoneKey: "info" });
   if (zoneCenter) attachZoneDnD(zoneCenter, { zoneKey: "center" });
@@ -291,7 +268,6 @@ function refreshSortRuleOptions() {
   if (!sortColSel) return;
   sortColSel.innerHTML = `<option value="">（なし）</option>`;
 
-  // 並び替え候補：メトリクスのみ
   const all = new Set([...zoneState.pool, ...zoneState.center, ...zoneState.table, ...zoneState.hidden, ...zoneState.info]);
   [...all]
     .filter((t) => String(t).startsWith("M:"))
@@ -355,7 +331,6 @@ function attachZoneDnD(zoneEl, { zoneKey }) {
     const raw = e.dataTransfer.getData("text/plain");
     if (!raw) return;
 
-    // ★tokenに ":" が含まれるため split(":") で壊れないように
     const first = raw.indexOf(":");
     if (first < 0) return;
     const kind = raw.slice(0, first);
@@ -373,7 +348,6 @@ function moveTokenToZone(token, toZone) {
     const idx = zoneState[z].indexOf(token);
     if (idx >= 0) zoneState[z].splice(idx, 1);
   }
-  // 重複禁止
   zoneState[toZone].push(token);
 }
 
@@ -424,7 +398,7 @@ function updateCartSummary() {
   let sales = 0;
   let cost = 0;
 
-  for (const [asin, it] of cart.entries()) {
+  for (const [, it] of cart.entries()) {
     const qty = num(it.qty);
     const s = num(it.sell);
     const c = num(it.cost);
@@ -461,13 +435,11 @@ function rerenderAllCards(applySort = false) {
     });
   }
 
-  // DOM並べ替えだけ（カード内は必要時に更新）
   asins.forEach((asin) => {
     const card = cardMap.get(asin);
     if (card) itemsContainer.appendChild(card);
   });
 
-  // 表示項目の再構築
   activeAsins.forEach((asin) => {
     const card = cardMap.get(asin);
     const data = window.ASIN_DATA?.[asin] || {};
@@ -495,7 +467,6 @@ function createProductCard(asin, data) {
       </div>
 
       <div class="layout3-grid">
-        <!-- 商品画像 -->
         <div class="l3-image l3-block">
           <div class="head">商品画像</div>
           <div class="image-box">
@@ -503,25 +474,21 @@ function createProductCard(asin, data) {
           </div>
         </div>
 
-        <!-- 商品情報① -->
         <div class="l3-infoA l3-block">
           <div class="head">商品情報①</div>
           <div class="info-grid js-infoGridA"></div>
         </div>
 
-        <!-- 商品情報② -->
         <div class="l3-infoB l3-block">
           <div class="head">商品情報②</div>
           <div class="info-grid js-infoGridB"></div>
         </div>
 
-        <!-- 主要項目 -->
         <div class="l3-center l3-block">
           <div class="head">主要項目</div>
           <div class="center-list js-center"></div>
         </div>
 
-        <!-- カート -->
         <div class="l3-buy">
           <div class="buy-title">数量</div>
           <select class="js-qty">
@@ -541,7 +508,6 @@ function createProductCard(asin, data) {
           <button class="cart-btn js-addCart" type="button" style="margin-top:12px;">カートに入れる</button>
         </div>
 
-        <!-- keepa（小） -->
         <div class="l3-keepa l3-block">
           <div class="head">keepaグラフ</div>
           <div class="keepa-mini">
@@ -549,7 +515,6 @@ function createProductCard(asin, data) {
           </div>
         </div>
 
-        <!-- 需要供給（大） -->
         <div class="l3-mes l3-block">
           <div class="head">需要供給グラフ（180日）</div>
 
@@ -572,7 +537,6 @@ function createProductCard(asin, data) {
       </div>
 
       <div class="layout4-grid">
-        <!-- 商品画像 -->
         <div class="l4-image l4-block">
           <div class="head">商品画像</div>
           <div class="image-box">
@@ -580,19 +544,16 @@ function createProductCard(asin, data) {
           </div>
         </div>
 
-        <!-- 商品情報① -->
         <div class="l4-info l4-block">
           <div class="head">商品情報①</div>
           <div class="info-grid js-infoGrid"></div>
         </div>
 
-        <!-- 主要項目 -->
         <div class="l4-center l4-block">
           <div class="head">主要項目</div>
           <div class="center-list js-center"></div>
         </div>
 
-        <!-- カート -->
         <div class="l4-buy">
           <div class="buy-title">数量</div>
           <select class="js-qty">
@@ -612,7 +573,6 @@ function createProductCard(asin, data) {
           <button class="cart-btn js-addCart" type="button" style="margin-top:12px;">カートに入れる</button>
         </div>
 
-        <!-- keepa（小） -->
         <div class="l4-keepa l4-block">
           <div class="head">keepaグラフ</div>
           <div class="keepa-mini">
@@ -620,7 +580,6 @@ function createProductCard(asin, data) {
           </div>
         </div>
 
-        <!-- 需要供給（横長） -->
         <div class="l4-mes l4-block">
           <div class="head">需要供給グラフ（180日）</div>
 
@@ -636,7 +595,6 @@ function createProductCard(asin, data) {
       </div>
     `;
   } else {
-    // 既存：alt / 通常
     card.innerHTML = isAltLayout
       ? `
       <div class="card-top">
@@ -788,12 +746,8 @@ function createProductCard(asin, data) {
     `;
   }
 
-  // remove
-  card.querySelector(".remove").addEventListener("click", () => {
-    removeAsin(asin);
-  });
+  card.querySelector(".remove").addEventListener("click", () => removeAsin(asin));
 
-  // cart add
   card.querySelector(".js-addCart")?.addEventListener("click", () => {
     const qty = num(card.querySelector(".js-qty")?.value || 1);
     const sell = num(card.querySelector(".js-sell")?.value || 0);
@@ -803,14 +757,12 @@ function createProductCard(asin, data) {
     updateHeaderStatus();
   });
 
-  // keepa url (iframe)
   const keepaFrame = card.querySelector(".js-keepaFrame");
   if (keepaFrame) {
     const keepaUrl = data["keepaURL"] || data["KeepaURL"] || data["keepa"] || "";
     if (keepaUrl) keepaFrame.src = keepaUrl;
   }
 
-  // graph switch (alt/通常のみ)
   const btnMes = card.querySelector(".js-btnMes");
   const btnKeepa = card.querySelector(".js-btnKeepa");
   const graphOptions = card.querySelector(".js-graphOptions");
@@ -839,9 +791,7 @@ function createProductCard(asin, data) {
     setMode("MES");
   }
 
-  // 初回描画
   applyZoneRenderToCard(card, asin, data);
-
   return card;
 }
 
@@ -849,27 +799,21 @@ function createProductCard(asin, data) {
    zones → カードへ反映
 ========================= */
 function applyZoneRenderToCard(card, asin, data) {
-  const ctx = { asin };
-
   const isThirdLayout = document.body.classList.contains("third-layout");
 
-  // info
   if (isThirdLayout) {
-    buildInfoGridSplit(card.querySelector(".js-infoGridA"), card.querySelector(".js-infoGridB"), ctx, data);
+    buildInfoGridSplit(card.querySelector(".js-infoGridA"), card.querySelector(".js-infoGridB"), data);
   } else {
-    buildInfoGrid(card.querySelector(".js-infoGrid"), ctx, data);
+    buildInfoGrid(card.querySelector(".js-infoGrid"), data);
   }
 
-  // center / table
-  buildCenterList(card.querySelector(".js-center"), ctx, data);
-  buildDetailTable(card.querySelector(".js-detailTable"), ctx, data);
+  buildCenterList(card.querySelector(".js-center"), data);
+  buildDetailTable(card.querySelector(".js-detailTable"), data);
 
-  // chart
   const canvas = card.querySelector(".js-chart");
   const chart = renderChart(canvas);
   card.__chart = chart;
 
-  // ✅ チェックボックス：両方ONなら3つ全部表示
   const chkDS = card.querySelector(".js-chkDS"); // 《需要＆供給》
   const chkSP = card.querySelector(".js-chkSP"); // 《供給＆価格》
 
@@ -882,7 +826,6 @@ function applyZoneRenderToCard(card, asin, data) {
   if (chkDS) chkDS.addEventListener("change", redraw);
   if (chkSP) chkSP.addEventListener("change", redraw);
 
-  // 初期（従来に近い）：需要＆供給だけON
   if (chkDS) chkDS.checked = true;
   if (chkSP) chkSP.checked = false;
 
@@ -890,9 +833,9 @@ function applyZoneRenderToCard(card, asin, data) {
 }
 
 /* =========================
-   商品情報：通常（1枠）
+   商品情報
 ========================= */
-function buildInfoGrid(root, ctx, data) {
+function buildInfoGrid(root, data) {
   if (!root) return;
   root.innerHTML = "";
 
@@ -907,29 +850,15 @@ function buildInfoGrid(root, ctx, data) {
     kEl.textContent = k;
 
     const vEl = document.createElement("div");
-    const isTags = Array.isArray(v);
-    if (isTags) {
-      vEl.className = "v v-tags";
-      v.forEach((t) => {
-        const span = document.createElement("span");
-        span.className = "tag";
-        span.textContent = String(t);
-        vEl.appendChild(span);
-      });
-    } else {
-      vEl.className = "v info-scroll";
-      vEl.textContent = String(v ?? "");
-    }
+    vEl.className = "v info-scroll";
+    vEl.textContent = String(v ?? "");
 
     root.appendChild(kEl);
     root.appendChild(vEl);
   }
 }
 
-/* =========================
-   商品情報：レイアウト3（2分割）
-========================= */
-function buildInfoGridSplit(rootA, rootB, ctx, data) {
+function buildInfoGridSplit(rootA, rootB, data) {
   if (!rootA || !rootB) return;
   rootA.innerHTML = "";
   rootB.innerHTML = "";
@@ -950,19 +879,8 @@ function buildInfoGridSplit(rootA, rootB, ctx, data) {
       kEl.textContent = k;
 
       const vEl = document.createElement("div");
-      const isTags = Array.isArray(v);
-      if (isTags) {
-        vEl.className = "v v-tags";
-        v.forEach((t) => {
-          const span = document.createElement("span");
-          span.className = "tag";
-          span.textContent = String(t);
-          vEl.appendChild(span);
-        });
-      } else {
-        vEl.className = "v info-scroll";
-        vEl.textContent = String(v ?? "");
-      }
+      vEl.className = "v info-scroll";
+      vEl.textContent = String(v ?? "");
 
       root.appendChild(kEl);
       root.appendChild(vEl);
@@ -976,26 +894,24 @@ function buildInfoGridSplit(rootA, rootB, ctx, data) {
 /* =========================
    主要項目
 ========================= */
-function buildCenterList(root, ctx, data) {
+function buildCenterList(root, data) {
   if (!root) return;
   root.innerHTML = "";
 
   for (const token of zoneState.center) {
     if (!String(token).startsWith("M:")) continue;
     const key = sourceKeyOf(token);
-    const label = labelOf(token);
-    const value = data[key];
 
     const row = document.createElement("div");
     row.className = "metric-row";
 
     const l = document.createElement("div");
     l.className = "label";
-    l.textContent = label;
+    l.textContent = labelOf(token);
 
     const v = document.createElement("div");
     v.className = "value";
-    v.textContent = String(value ?? "");
+    v.textContent = String(data[key] ?? "");
 
     row.appendChild(l);
     row.appendChild(v);
@@ -1006,7 +922,7 @@ function buildCenterList(root, ctx, data) {
 /* =========================
    下段（テーブル）
 ========================= */
-function buildDetailTable(table, ctx, data) {
+function buildDetailTable(table, data) {
   if (!table) return;
 
   const headRow = table.querySelector("thead tr");
@@ -1030,10 +946,6 @@ function buildDetailTable(table, ctx, data) {
 
 /* =========================
    グラフ（Chart.js）
-   - X：日付（過去180日）
-   - 左Y：価格（USD）
-   - 右Y：ランキング（低いほど良い）※Keepa寄せで reverse
-   - 右Y2：セラー数
 ========================= */
 function renderChart(canvas) {
   if (!canvas) return null;
@@ -1044,12 +956,33 @@ function renderChart(canvas) {
     data: {
       labels: [],
       datasets: [
-        // 0: 価格（オレンジ想定） ※色指定はしていません（CSS/Chartのデフォに任せ）
-        { label: "価格 (USD)", data: [], tension: 0, yAxisID: "yPrice", pointRadius: 0 },
-        // 1: ランキング（緑想定）
-        { label: "ランキング (BSR)", data: [], tension: 0, yAxisID: "yRank", pointRadius: 0 },
-        // 2: セラー数（紫想定）
-        { label: "セラー数", data: [], tension: 0, yAxisID: "ySellers", pointRadius: 0 },
+        // 0: 価格（オレンジ）
+        {
+          label: "価格 (USD)",
+          data: [],
+          tension: 0,
+          yAxisID: "yPrice",
+          pointRadius: 0,
+          borderColor: "#ff7a00",
+        },
+        // 1: ランキング（緑）
+        {
+          label: "ランキング (BSR)",
+          data: [],
+          tension: 0,
+          yAxisID: "yRank",
+          pointRadius: 0,
+          borderColor: "#3aa85b",
+        },
+        // 2: セラー数（紫）
+        {
+          label: "セラー数",
+          data: [],
+          tension: 0,
+          yAxisID: "ySellers",
+          pointRadius: 0,
+          borderColor: "#6a5acd",
+        },
       ],
     },
     options: {
@@ -1074,7 +1007,16 @@ function renderChart(canvas) {
       scales: {
         x: {
           title: { display: true, text: "日付（過去180日）" },
-          ticks: { maxTicksLimit: 10 },
+          ticks: {
+            autoSkip: false,
+            maxRotation: 0,
+            callback: function (value, index, ticks) {
+              // updateChart内で chart.__majorTickIndexSet を作る
+              const set = this.chart?.__majorTickIndexSet;
+              if (set && set.has(index)) return this.chart.data.labels[index];
+              return "";
+            },
+          },
         },
         yPrice: {
           position: "left",
@@ -1101,28 +1043,43 @@ function renderChart(canvas) {
 }
 
 /* =========================
-   グラフデータ生成（Keepa風）
-   - price(USD): 段差中心＋微ノイズ
-   - sellers: 段差中心＋たまに変化
-   - rank: 揺れ＋スパイク
+   グラフデータ生成（相関あり・Keepa寄せ）
+   要望のイメージ：
+   - ランキングが上がる(=BSRが小さくなる) → 価格も上がりやすい
+   - ただしセラー数が増えると価格が下がりやすい
+   - ランキングが下がる(=BSRが大きくなる) → セラー数が減り、価格が高くなりやすい（供給減で粘る）
 ========================= */
 function updateChart(chart, data, { ds = true, sp = false } = {}) {
   if (!chart) return;
 
   const days = 180;
-  const pad2 = (n) => String(n).padStart(2, "0");
+
+  // ===== 日付ラベル（実日付） =====
   const today = new Date();
-  const labels = Array.from({ length: days }, (_, i) => {
+  const dates = Array.from({ length: days }, (_, i) => {
     const d = new Date(today);
     d.setDate(today.getDate() - (days - 1 - i));
-    return `${pad2(d.getMonth() + 1)}/${pad2(d.getDate())}`;
+    return d;
   });
+  const labels = dates.map((d) => `${d.getMonth() + 1}/${String(d.getDate()).padStart(2, "0")}`);
 
-  // --- utility (stable random) ---
+  // ===== 見やすい目盛り：月初 + 30日ごと + 末尾 =====
+  const major = new Set();
+  major.add(0);
+  major.add(days - 1);
+  for (let i = 0; i < days; i++) {
+    const d = dates[i];
+    if (d.getDate() === 1) major.add(i); // 月初
+    if (i % 30 === 0) major.add(i); // 30日ごと
+  }
+  chart.__majorTickIndexSet = major;
+
+  // ===== utility =====
   const numLocal = (v) => {
     const x = Number(String(v ?? "").replace(/[^\d.\-]/g, ""));
     return Number.isFinite(x) ? x : 0;
   };
+  const clamp = (x, min, max) => Math.min(max, Math.max(min, x));
   const seedFromString = (str) => {
     let h = 2166136261;
     for (let i = 0; i < str.length; i++) {
@@ -1137,7 +1094,6 @@ function updateChart(chart, data, { ds = true, sp = false } = {}) {
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
-  const clamp = (x, min, max) => Math.min(max, Math.max(min, x));
   const smooth = (arr, w = 3) => {
     const out = [];
     for (let i = 0; i < arr.length; i++) {
@@ -1155,7 +1111,7 @@ function updateChart(chart, data, { ds = true, sp = false } = {}) {
   };
 
   const asin = data?.ASIN || data?.asin || "";
-  const rand = mulberry32(seedFromString(`${asin}-keepaish`));
+  const rand = mulberry32(seedFromString(`${asin}-coupled`));
 
   const getBasePrice = () => {
     const candidates = [
@@ -1171,68 +1127,152 @@ function updateChart(chart, data, { ds = true, sp = false } = {}) {
     return 29.99;
   };
 
-  // 価格：段差中心＆変動少なめ
   const basePrice = getBasePrice();
-  let priceNow = basePrice;
-  const priceEvents = [];
-  const priceEventCount = 6 + Math.floor(rand() * 10); // 6..15
-  for (let k = 0; k < priceEventCount; k++) {
-    const at = Math.floor(rand() * (days - 5)) + 2;
-    const stepPct = rand() * 0.12 - 0.06; // -6%..+6%
-    priceEvents.push({ at, stepPct });
+
+  // ===== 需要(demand) の潜在状態（0..1）
+  // 需要が高いほどランキングは良い（BSR小）＆価格上がりやすい
+  let demand = clamp(0.45 + (rand() * 0.25 - 0.125), 0.2, 0.85);
+
+  // ===== 供給(sellers) 初期
+  let sellersNow = Math.round(6 + rand() * 8); // 6..14
+
+  // ===== 価格 初期
+  let priceNow = basePrice * (0.92 + rand() * 0.2); // baseの±
+
+  // ===== 価格変動の「段差イベント」（Keepaっぽい）
+  const stepEvents = [];
+  const stepCount = 7 + Math.floor(rand() * 10); // 7..16
+  for (let k = 0; k < stepCount; k++) {
+    const at = Math.floor(rand() * (days - 10)) + 5;
+    // demand連動を強めたいので、イベントは小さめ
+    const mag = (rand() * 0.09 - 0.045); // -4.5%..+4.5%
+    stepEvents.push({ at, mag });
   }
-  priceEvents.sort((a, b) => a.at - b.at);
+  stepEvents.sort((a, b) => a.at - b.at);
+
+  // ===== lag（セラー数が需要/価格に追随する遅れ）
+  const demandLag = Array(days).fill(demand);
 
   const price = [];
+  const sellers = [];
+  const rank = [];
+
+  // ランキング（BSR）レンジ（商品ごとにばらす）
+  const rankBase = Math.round(800 + rand() * 25000);     // 平均位置
+  const rankSpan = Math.round(6000 + rand() * 65000);    // 変動幅
+
+  // セラー数レンジ
+  const sellersMin = 1;
+  const sellersMax = 60;
+
   for (let i = 0; i < days; i++) {
-    while (priceEvents.length && priceEvents[0].at === i) {
-      const ev = priceEvents.shift();
-      priceNow = priceNow * (1 + ev.stepPct);
+    // --- 需要のゆらぎ（ゆっくり変化＋たまにショック）
+    let drift = (rand() * 0.06 - 0.03);          // -0.03..+0.03
+    drift *= 0.10;                               // かなりゆっくり
+    demand = clamp(demand + drift, 0.12, 0.92);
+
+    // 月初などでイベントっぽいショック
+    if (dates[i].getDate() === 1 && rand() < 0.45) {
+      demand = clamp(demand + (rand() * 0.18 - 0.06), 0.12, 0.92);
     }
-    if (rand() < 0.25) priceNow *= 1 + (rand() * 0.002 - 0.001); // 微ノイズ
-    priceNow = clamp(priceNow, basePrice * 0.75, basePrice * 1.35);
+    // たまに強いショック
+    if (rand() < 0.015) {
+      demand = clamp(demand + (rand() < 0.5 ? -1 : 1) * (0.08 + rand() * 0.18), 0.12, 0.92);
+    }
+    demandLag[i] = demand;
+
+    // --- ランキング生成：需要が高いほど「小さく（良く）」なる
+    // keepaっぽいギザギザ（ノイズ＋スパイク）
+    const noise = (rand() * 2 - 1) * 0.08; // -0.08..0.08
+    const demandFactor = clamp(1.0 - demand, 0.05, 0.95); // demand↑で小さく
+    let bsr = rankBase + rankSpan * demandFactor;
+    bsr *= 1 + noise;
+
+    // スパイク（売れた/切れた感）
+    if (rand() < 0.04) {
+      bsr *= rand() < 0.55 ? (1.35 + rand() * 0.9) : (0.35 + rand() * 0.45);
+    }
+    bsr = clamp(bsr, 1, 200000);
+    rank.push(bsr);
+
+    // --- セラー数：需要が高いと増えやすいが、反応は遅い
+    // 追随：30日前の需要 + 現在価格の高さが「参入」を呼ぶ
+    const lagIdx = Math.max(0, i - 20 - Math.floor(rand() * 10)); // 約20〜30日遅れ
+    const demandRef = demandLag[lagIdx];
+    const pricePremium = clamp((priceNow / basePrice) - 1, -0.3, 0.6); // 高値ほど参入増
+
+    // 参入圧（＋）と撤退圧（−）
+    let sellerDrift = 0;
+    sellerDrift += (demandRef - 0.45) * 2.2;       // 需要が高いと増える
+    sellerDrift += pricePremium * 2.0;             // 価格が高いと増える
+    sellerDrift -= (demandRef < 0.25 ? 0.8 : 0.0); // 需要低いと減る
+
+    // 小刻み変動
+    if (rand() < 0.35) sellersNow += Math.sign(sellerDrift) * (rand() < 0.6 ? 0 : 1);
+    if (rand() < 0.12) sellersNow += Math.round(rand() * 2 - 1);
+
+    // 大きめの変化（まとまった参入/撤退）
+    if (rand() < 0.04) sellersNow += Math.round(sellerDrift * (0.8 + rand() * 0.8));
+
+    sellersNow = clamp(sellersNow, sellersMin, sellersMax);
+    sellers.push(Math.round(sellersNow));
+
+    // --- 価格：需要↑(ランキング良い)で上がり、セラー↑で下がる
+    // （要求イメージの核）
+    // ランキング良さ（良い=小さい）を0..1へ正規化
+    const bsrNorm = clamp((Math.log(bsr + 1) - Math.log(1)) / (Math.log(200000) - Math.log(1)), 0, 1); // 0:良,1:悪
+    const rankGood = 1 - bsrNorm; // 1:良い
+
+    // セラー多さ（0..1）
+    const sellersNorm = clamp((sellersNow - sellersMin) / (sellersMax - sellersMin), 0, 1);
+
+    // 基本の価格変化率：需要（rankGood）で上、セラーで下
+    let pct = 0;
+    pct += (rankGood - 0.5) * 0.030;     // 需要効果（最大±1.5%/日くらいの上限へ）
+    pct -= (sellersNorm - 0.25) * 0.020; // 供給効果（多いほど下げ）
+
+    // 段差イベント（Keepa感）
+    while (stepEvents.length && stepEvents[0].at === i) {
+      const ev = stepEvents.shift();
+      priceNow *= 1 + ev.mag;
+    }
+
+    // 価格の段差っぽい「据え置き」：たまに変えない
+    if (rand() < 0.35) pct *= 0.0; // 据え置き日
+
+    // 競争が激しい（セラー多）時は下げ圧を追加
+    if (sellersNow >= 18 && rand() < 0.55) pct -= 0.006 * (0.6 + rand());
+
+    // 供給が少ない（セラー少）時は上げ圧（粘り）
+    if (sellersNow <= 4 && rand() < 0.45) pct += 0.007 * (0.6 + rand());
+
+    // ノイズ（微）
+    pct += (rand() * 0.002 - 0.001);
+
+    priceNow *= 1 + pct;
+
+    // 価格の下限/上限（商品ごと）
+    const minP = basePrice * 0.70;
+    const maxP = basePrice * 1.55;
+    priceNow = clamp(priceNow, minP, maxP);
+
+    // Keepaっぽい段差感（1セント刻み）
     price.push(Math.round(priceNow * 100) / 100);
   }
 
-  // セラー数：段差で少しずつ
-  let sellersNow = Math.floor(4 + rand() * 12); // 4..15
-  const sellers = [];
-  for (let i = 0; i < days; i++) {
-    if (rand() < 0.22) sellersNow += Math.round(rand() * 2 - 1);
-    if (rand() < 0.08) sellersNow += Math.round(rand() * 4 - 2);
-    sellersNow = clamp(sellersNow, 1, 60);
-    sellers.push(Math.round(sellersNow));
-  }
-
-  // ランキング：ギザギザ＋スパイク（Keepaっぽさ）
-  let rankNow = Math.floor(800 + rand() * 25000);
-  const spikes = new Set();
-  const spikeCount = 4 + Math.floor(rand() * 8);
-  for (let k = 0; k < spikeCount; k++) spikes.add(Math.floor(rand() * days));
-
-  const rank = [];
-  for (let i = 0; i < days; i++) {
-    if (rand() < 0.85) rankNow *= 1 + (rand() * 0.2 - 0.1); // -10%..+10%
-    if (spikes.has(i)) {
-      rankNow *= rand() < 0.55 ? 1.6 + rand() * 1.6 : 0.45 + rand() * 0.35; // 悪化or改善のスパイク
-    }
-    rankNow = clamp(rankNow, 1, 200000);
-    rank.push(rankNow);
-  }
+  // rankは少しだけ滑らかに（ギザギザは残す）
   const rankSm = smooth(rank, 3).map((x) => Math.round(x));
 
   // 反映
   chart.data.labels = labels;
-
-  // datasets固定：0=価格 / 1=ランキング / 2=セラー数
   chart.data.datasets[0].data = price;
   chart.data.datasets[1].data = rankSm;
   chart.data.datasets[2].data = sellers;
 
-  // ✅ 表示制御（要望どおり）
-  const showRank = ds; // 《需要＆供給》ONならランキング
-  const showPrice = sp; // 《供給＆価格》ONなら価格
-  const showSellers = ds || sp; // どちらかONならセラー数
+  // ✅ 表示制御（両方ONなら3つ全部）
+  const showRank = ds;
+  const showPrice = sp;
+  const showSellers = ds || sp;
 
   chart.data.datasets[0].hidden = !showPrice;
   chart.data.datasets[1].hidden = !showRank;
