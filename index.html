@@ -1,0 +1,1286 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>カートUI（プロトタイプ） v3</title>
+  <style>
+    :root{
+      --panel:#d9d39a;
+      --topbtn:#d47b7c;
+      --ink:#1a1a1a;
+      --shadow: 0 10px 30px rgba(0,0,0,.18);
+      --radius: 28px;
+
+      /* shop colors */
+      --amz1:#f1b35d; --amz2:#e7a54a;
+      --rkt1:#f0a2a6; --rkt2:#e6868f;
+      --yah1:#b2a7f5; --yah2:#8f84df;
+      --oth1:#bdbdbd; --oth2:#a8a8a8;
+
+      --empty:#bdbdbd;
+      --chip:#ffffff66;
+      --danger:#f04c4c;
+      --dark:#111;
+
+      /* left UI */
+      --cardbg:#ffffff;
+      --stroke: rgba(0,0,0,.08);
+      --softshadow: 0 8px 24px rgba(0,0,0,.08);
+      --muted:#6b7280;
+
+      /* top row height (match "主要項目") */
+      --topRowH: 420px;
+    }
+
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", Segoe UI, Roboto, "Helvetica Neue", Arial, sans-serif;
+      color:var(--ink);
+      background:#f3f3f3;
+      display:flex;
+      justify-content:center;
+      padding:24px;
+    }
+
+    .stage{
+      width: min(1560px, 100%);
+      display:grid;
+      grid-template-columns: minmax(820px, 1fr) 360px;
+      gap:18px;
+      align-items:start;
+    }
+
+    /* ===== Left: page mock ===== */
+    .mock{
+      border-radius: 18px;
+      background: transparent;
+      position:relative;
+      overflow:visible;
+      min-height: 680px;
+    }
+
+    .card-ui{
+      background: var(--cardbg);
+      border-radius: 18px;
+      box-shadow: var(--softshadow);
+      border: 1px solid var(--stroke);
+      padding: 14px;
+      overflow:hidden;
+    }
+    .card-ui h4{
+      margin:0 0 10px;
+      font-size:16px;
+      font-weight:1000;
+      letter-spacing:.02em;
+    }
+    .subtle{
+      color:var(--muted);
+      font-size:12px;
+      font-weight:900;
+    }
+
+    /* ===== top row layout ===== */
+    .top-row{
+      display:grid;
+      grid-template-columns: 1.05fr 1.05fr 1.55fr;
+      gap:14px;
+      align-items:stretch;
+      grid-auto-rows: var(--topRowH);
+    }
+    .top-row .card-ui{
+      height: var(--topRowH);
+      display:flex;
+      flex-direction:column;
+    }
+
+    /* Product image card */
+    .product-image{
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      flex:1;
+      min-height:0;
+    }
+    .img-frame{
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid rgba(0,0,0,.08);
+      background: #f6f7f9;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      overflow:hidden;
+      padding: 12px;
+      flex:1;
+      min-height:0;
+    }
+    .img-frame img{
+      width:100%;
+      height:100%;
+      object-fit:contain;
+      display:block;
+    }
+
+    /* Product info card */
+    .info-list{
+      display:grid;
+      grid-template-columns: 120px 1fr;
+      gap:10px 14px;
+      font-size:13px;
+      font-weight:900;
+      line-height:1.35;
+    }
+    .info-list .k{
+      color:var(--muted);
+      font-weight:1000;
+      letter-spacing:.02em;
+    }
+    .info-list .v{
+      font-weight:1000;
+      min-width:0;
+      word-break:break-word;
+    }
+    .stars{ letter-spacing:.06em; color:#111; }
+    .badge-row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-top: 6px;
+    }
+    .badge{
+      font-size:12px;
+      font-weight:1000;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(0,0,0,.08);
+      background:#f8fafc;
+      white-space:nowrap;
+    }
+    .badge.red{ color:#b91c1c; background:#fee2e2; border-color: rgba(185,28,28,.18); }
+    .badge.blue{ color:#1d4ed8; background:#dbeafe; border-color: rgba(29,78,216,.18); }
+    .badge.orange{ color:#9a3412; background:#ffedd5; border-color: rgba(154,52,18,.18); }
+
+    .card-ui.scrollable .scroll-area{
+      overflow:auto;
+      padding-right: 6px;
+      flex:1;
+      min-height:0;
+    }
+
+    /* ===== 主要項目 ===== */
+    .metric-grid{
+      display:grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap:10px;
+      margin-top: 8px;
+    }
+    .metric{
+      border: 1px solid rgba(0,0,0,.08);
+      border-radius: 14px;
+      padding: 12px;
+      background: #fff;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.25);
+      min-height: 92px;
+    }
+    .metric .label{
+      font-size:12px;
+      color:var(--muted);
+      font-weight:1000;
+    }
+    .metric .value{
+      margin-top: 6px;
+      font-size:18px;
+      font-weight:1000;
+    }
+
+    .bottom-pills{
+      margin-top: 12px;
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+    }
+    .pillbox{
+      border-radius: 14px;
+      border: 1px solid rgba(0,0,0,.08);
+      background: #f5f7ff;
+      padding: 12px 14px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      font-weight:1000;
+      gap:10px;
+    }
+    .pillbox .l{
+      font-size:12px;
+      color:var(--muted);
+      font-weight:1000;
+    }
+    .pillbox .r{
+      font-size:16px;
+      font-weight:1000;
+      white-space:nowrap;
+    }
+    .metrics-card .bottom-pills{ margin-top:auto; }
+
+    /* 主要項目：固定値（入力不可） */
+    .inputs-grid{
+      display:grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap:10px;
+      margin-top: 10px;
+    }
+    .m-input{
+      border: 1px solid rgba(0,0,0,.08);
+      border-radius: 14px;
+      background:#fff;
+      padding: 10px 12px;
+      min-height: 72px;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      gap:8px;
+    }
+    .m-input .label{
+      font-size:12px;
+      color:var(--muted);
+      font-weight:1000;
+      line-height:1.2;
+    }
+    .m-input input{
+      width:100%;
+      border: 1px solid rgba(0,0,0,.10);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-weight:1000;
+      outline:none;
+      background:#f8fafc;          /* 固定値っぽく */
+      text-align:left;
+      cursor: not-allowed;
+      color:#111;
+    }
+    .m-input input[readonly]{
+      pointer-events:none;          /* 動かない */
+    }
+
+    /* Lower row */
+    .lower{
+      margin-top: 14px;
+      display:grid;
+      grid-template-columns: 1fr 2fr;
+      gap:14px;
+      align-items:start;
+    }
+    .placeholder{
+      border-radius: 14px;
+      border: 1px dashed rgba(0,0,0,.18);
+      background: #f6f7f9;
+      min-height: 260px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:#9aa0a6;
+      font-weight:1000;
+      user-select:none;
+      text-align:center;
+      padding:12px;
+    }
+    .chart-wrap{
+      border-radius: 14px;
+      border: 1px solid rgba(0,0,0,.08);
+      background: #fff;
+      padding: 12px;
+      overflow:hidden;
+    }
+    .chart-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom: 10px;
+    }
+    .chart-head .title{
+      font-weight:1000;
+    }
+    .toggles{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      color:var(--muted);
+      font-size:12px;
+      font-weight:1000;
+    }
+    .toggles label{
+      display:flex; gap:6px; align-items:center;
+      cursor:pointer;
+      user-select:none;
+      white-space:nowrap;
+    }
+    .fake-graph{
+      height: 260px;
+      border-radius: 12px;
+      background:
+        linear-gradient(to right, rgba(0,0,0,.05) 1px, transparent 1px) 0 0/32px 32px,
+        linear-gradient(to bottom, rgba(0,0,0,.05) 1px, transparent 1px) 0 0/32px 32px,
+        linear-gradient(180deg, #f8fafc, #ffffff);
+      border: 1px solid rgba(0,0,0,.06);
+      position:relative;
+      overflow:hidden;
+    }
+    .fake-line{
+      position:absolute;
+      inset:0;
+    }
+    .fake-line::before{
+      content:"";
+      position:absolute;
+      left:-10%;
+      top:52%;
+      width:120%;
+      height:2px;
+      background: rgba(59,130,246,.9);
+      transform: rotate(-12deg);
+      filter: blur(.1px);
+    }
+    .fake-line::after{
+      content:"";
+      position:absolute;
+      left:-10%;
+      top:68%;
+      width:120%;
+      height:2px;
+      background: rgba(245,158,11,.9);
+      transform: rotate(-6deg);
+      filter: blur(.1px);
+    }
+    .legend{
+      margin-top: 10px;
+      display:flex;
+      gap:12px;
+      flex-wrap:wrap;
+      font-size:12px;
+      font-weight:1000;
+      color:var(--muted);
+    }
+    .dot{
+      width:10px;height:10px;border-radius:999px;display:inline-block;margin-right:6px;
+    }
+
+    /* ===== Right: cart ===== */
+    .side{
+      background: var(--panel);
+      border-radius: var(--radius);
+      padding: 16px 18px 12px;
+      box-shadow: var(--shadow);
+      position:sticky;
+      top:16px;
+    }
+
+    /* 赤い枠（最安値）には“入力欄を入れない” */
+    .top-pill{
+      background: var(--topbtn);
+      color:#fff;
+      border-radius: 24px;
+      padding: 16px 14px 14px;
+      text-align:center;
+      line-height:1.25;
+      font-weight:900;
+      letter-spacing:.02em;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.18);
+    }
+    .top-pill .min{ font-size:20px; font-weight:1000; }
+    .top-pill small{
+      display:block;
+      font-weight:800;
+      opacity:.92;
+      margin-top:8px;
+    }
+    .top-pill button{
+      margin-top:12px;
+      border:0;
+      background: rgba(255,255,255,.18);
+      color:#fff;
+      font-weight:1000;
+      padding: 12px 14px;
+      border-radius: 999px;
+      cursor:pointer;
+      width: 100%;
+    }
+
+    /* 入力欄：赤枠の外（下） */
+    .top-inputs{
+      margin-top: 10px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      padding: 10px;
+      border-radius: 18px;
+      background: rgba(255,255,255,.35);
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.06);
+    }
+
+    .section-title{
+      margin:12px 0 8px;
+      font-weight:1000;
+      letter-spacing:.04em;
+      text-align:center;
+      font-size:18px;
+    }
+
+    .shop-block{ margin: 12px 6px; }
+    .shop-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      font-weight:1000;
+      margin-bottom:8px;
+    }
+    .shop-head .name{ display:flex; align-items:center; gap:8px; }
+    .plus{
+      width:26px;height:26px;
+      border-radius:999px;
+      border:0;
+      background: rgba(0,0,0,.14);
+      cursor:pointer;
+      display:grid;place-items:center;
+      font-weight:1000;
+      transform: translateY(-1px);
+    }
+    .rows{ display:flex; flex-direction:column; gap:10px; }
+    .row{
+      border-radius: 999px;
+      padding: 12px 14px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.18);
+      font-weight:900;
+      gap:10px;
+    }
+    .row .price{ min-width: 96px; font-size:18px; }
+    .row .right{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      margin-left:auto;
+    }
+
+    /* qty stepper */
+    .stepper{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      background: var(--chip);
+      padding: 6px 8px;
+      border-radius: 999px;
+      min-width: 160px;
+      justify-content:space-between;
+    }
+    .stepper .label{
+      font-weight:1000;
+      opacity:.92;
+      padding-left:4px;
+      white-space:nowrap;
+    }
+    .stepper .controls{
+      display:flex;
+      align-items:center;
+      gap:6px;
+    }
+    .stepper .qbtn{
+      width:30px;height:30px;
+      border-radius:999px;
+      border:0;
+      cursor:pointer;
+      background: rgba(0,0,0,.12);
+      font-weight:1000;
+      line-height:1;
+    }
+    .stepper .qval{
+      min-width: 30px;
+      text-align:center;
+      font-weight:1000;
+    }
+
+    .del{
+      width:32px;height:32px;
+      border-radius:999px;
+      border:0;
+      background: var(--danger);
+      color:#fff;
+      font-weight:1000;
+      cursor:pointer;
+      box-shadow: inset 0 0 0 2px rgba(255,255,255,.18);
+    }
+    .row.dim{
+      background: var(--empty);
+      opacity:.78;
+      box-shadow:none;
+    }
+
+    /* shop gradients */
+    .shop-amazon { background: linear-gradient(180deg,var(--amz1),var(--amz2)); }
+    .shop-rakuten{ background: linear-gradient(180deg,var(--rkt1),var(--rkt2)); }
+    .shop-yahoo  { background: linear-gradient(180deg,var(--yah1),var(--yah2)); }
+    .shop-other  { background: linear-gradient(180deg,var(--oth1),var(--oth2)); }
+
+    .dash{
+      border-top: 2px dashed rgba(0,0,0,.35);
+      margin: 18px 6px 14px;
+    }
+
+    .summary{
+      margin: 6px 6px 10px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .sfield{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding: 10px 12px;
+      background: rgba(255,255,255,.55);
+      border-radius: 18px;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.07);
+      font-weight:1000;
+    }
+    .sfield .label{ white-space:nowrap; }
+    .sfield .control{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      margin-left:auto;
+    }
+    .sfield input{
+      width: 140px;
+      border:0;
+      border-radius: 14px;
+      padding: 10px 12px;
+      font-weight:1000;
+      text-align:right;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.10);
+      background:#fff;
+      outline:none;
+    }
+    .reset{
+      width:40px;height:40px;
+      border-radius:14px;
+      border:0;
+      cursor:pointer;
+      background: rgba(0,0,0,.10);
+      font-weight:1000;
+    }
+    .hinttxt{
+      font-size:12px;
+      font-weight:900;
+      opacity:.75;
+      margin-top:-6px;
+      margin-left: 8px;
+      line-height:1.35;
+    }
+
+    .actions{
+      display:flex;
+      gap:10px;
+      justify-content:center;
+      padding: 6px 6px 4px;
+    }
+    .btn{
+      border:0;
+      border-radius: 999px;
+      padding: 12px 14px;
+      font-weight:1000;
+      cursor:pointer;
+      background: rgba(255,255,255,.6);
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.08);
+      width: 50%;
+    }
+    .btn.primary{ background: rgba(255,255,255,.85); }
+
+    /* Modal */
+    .overlay{
+      position:fixed; inset:0;
+      background: rgba(0,0,0,.55);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+      z-index:50;
+    }
+    .overlay.open{display:flex;}
+    .modal{
+      width:min(720px, 100%);
+      background: var(--panel);
+      border-radius: 26px;
+      box-shadow: var(--shadow);
+      padding: 18px;
+      position:relative;
+    }
+    .close{
+      position:absolute;
+      right:14px; top:14px;
+      width:34px; height:34px;
+      border-radius:999px;
+      border:0;
+      background: var(--danger);
+      color:#fff;
+      font-weight:1000;
+      cursor:pointer;
+      box-shadow: inset 0 0 0 2px rgba(255,255,255,.25);
+    }
+    .modal h3{
+      margin: 4px 8px 12px;
+      font-size:16px;
+      font-weight:1000;
+      letter-spacing:.02em;
+      opacity:.95;
+    }
+    .modal-list{
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      margin-top: 6px;
+      max-height: 62vh;
+      overflow:auto;
+      padding-right: 4px;
+    }
+    .card{
+      border-radius: 22px;
+      padding: 14px 14px;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.18);
+    }
+    .card-head{
+      display:flex; justify-content:space-between; align-items:flex-start;
+      gap:12px;
+      font-weight:1000;
+    }
+    .meta{
+      margin-top:10px;
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px 12px;
+      align-items:center;
+    }
+    .pill{
+      display:flex; justify-content:space-between; align-items:center;
+      padding: 10px 12px;
+      background: rgba(255,255,255,.35);
+      border-radius: 14px;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.06);
+      font-weight:1000;
+      gap:10px;
+    }
+    .okwrap{
+      display:flex;
+      justify-content:center;
+      margin: 16px 0 8px;
+    }
+    .ok{
+      border:0;
+      width:min(420px, 100%);
+      border-radius: 999px;
+      padding: 14px 16px;
+      background:#ff2f2f;
+      color:#fff;
+      font-weight:1000;
+      font-size:18px;
+      cursor:pointer;
+      box-shadow: 0 10px 20px rgba(255,47,47,.25), inset 0 0 0 2px rgba(255,255,255,.15);
+    }
+
+    /* Small input modal (manual add) */
+    .mini{ width:min(520px, 100%); }
+    .mini .grid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:12px;
+      margin: 10px 4px 4px;
+    }
+    .mini .title{
+      margin: 2px 6px 10px;
+      font-weight:1000;
+      letter-spacing:.02em;
+    }
+    .field{
+      display:flex; justify-content:space-between; align-items:center;
+      padding: 10px 12px;
+      background: rgba(255,255,255,.35);
+      border-radius: 14px;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.06);
+      font-weight:1000;
+      gap:10px;
+    }
+    .field input{
+      width: 120px;
+      border:0;
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-weight:1000;
+      text-align:right;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.10);
+      background:#fff;
+      outline:none;
+    }
+    .mini .actions2{
+      display:flex; gap:10px; justify-content:center;
+      margin-top: 14px;
+    }
+    .mini .addbtn{
+      border:0;
+      width:min(360px, 100%);
+      border-radius: 999px;
+      padding: 13px 16px;
+      background: var(--dark);
+      color:#fff;
+      font-weight:1000;
+      cursor:pointer;
+      box-shadow: 0 10px 20px rgba(0,0,0,.18), inset 0 0 0 2px rgba(255,255,255,.08);
+    }
+
+    /* Responsive */
+    @media (max-width: 1180px){
+      .stage{ grid-template-columns: 1fr; }
+      .side{ position:relative; top:auto; }
+    }
+    @media (max-width: 1080px){
+      :root{ --topRowH: auto; }
+      .top-row{ grid-template-columns: 1fr; grid-auto-rows: auto; }
+      .top-row .card-ui{ height:auto; }
+      .lower{ grid-template-columns: 1fr; }
+      .metric-grid, .inputs-grid{ grid-template-columns: 1fr; }
+    }
+    @media (max-width: 900px){
+      body{padding:14px}
+    }
+  </style>
+</head>
+<body>
+  <div class="stage">
+
+    <!-- LEFT -->
+    <main class="mock" aria-label="商品ページモック">
+      <div class="top-row">
+
+        <!-- 商品画像 -->
+        <section class="card-ui image-card">
+          <h4>商品画像</h4>
+          <div class="product-image">
+            <div class="img-frame" aria-label="商品画像プレースホルダー">
+              <img alt="商品画像" src="https://dummyimage.com/800x520/e5e7eb/9ca3af.png&text=Product+Image" />
+            </div>
+          </div>
+        </section>
+
+        <!-- 商品情報（注意事項を一番上） -->
+        <section class="card-ui scrollable">
+          <h4>商品情報</h4>
+          <div class="scroll-area">
+            <div class="info-list">
+              <div class="k">注意事項</div>
+              <div class="v">
+                <div class="badge-row">
+                  <span class="badge red">輸出不可</span>
+                  <span class="badge blue">知財</span>
+                  <span class="badge orange">大型</span>
+                </div>
+              </div>
+
+              <div class="k">商品名</div><div class="v">スーパーアクションヒーロー 5体セット</div>
+              <div class="k">ブランド</div><div class="v">HeroWorks</div>
+              <div class="k">評価</div><div class="v"><span class="stars">★★★★☆</span> <span class="subtle">(523)</span></div>
+              <div class="k">各種ASIN</div><div class="v">日本：B0J0000001 / US：B0A0000001</div>
+              <div class="k">JAN</div><div class="v">4900000000001</div>
+              <div class="k">SKU</div><div class="v">HW-HERO-SET-5</div>
+              <div class="k">サイズ</div><div class="v">32×26×8</div>
+              <div class="k">重量（実積重量）</div><div class="v">1.10kg（1.20kg）</div>
+              <div class="k">カテゴリ</div><div class="v">Toys &amp; Games / Action Figures</div>
+              <div class="k">材質</div><div class="v">プラスチック / 紙</div>
+              <div class="k">備考</div><div class="v">長くなってもカード内スクロールで見られます。</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 主要項目 -->
+        <section class="card-ui metrics-card">
+          <h4>主要項目</h4>
+
+          <!-- 1段目：実績 -->
+          <div class="metric-grid">
+            <div class="metric">
+              <div class="label">180日販売数（実績）</div>
+              <div class="value">510</div>
+            </div>
+            <div class="metric">
+              <div class="label">90日販売数（実績）</div>
+              <div class="value">260</div>
+            </div>
+            <div class="metric">
+              <div class="label">30日販売数（実績）</div>
+              <div class="value">95</div>
+            </div>
+          </div>
+
+          <!-- 2段目：予測 180/90/30（固定値・動かない） -->
+          <div class="inputs-grid" style="margin-top:10px;">
+            <div class="m-input">
+              <div class="label">予測180日販売数</div>
+              <input id="pred180" value="620" readonly aria-readonly="true">
+            </div>
+            <div class="m-input">
+              <div class="label">予測90日販売数</div>
+              <input id="pred90" value="330" readonly aria-readonly="true">
+            </div>
+            <div class="m-input">
+              <div class="label">予測30日販売数</div>
+              <input id="pred30" value="120" readonly aria-readonly="true">
+            </div>
+          </div>
+
+          <!-- 3段目：複数在庫45/60（固定値）＋ 自由記入（固定値の例文） -->
+          <div class="inputs-grid" style="margin-top:10px;">
+            <div class="m-input">
+              <div class="label">複数在庫45日</div>
+              <input id="multi45" value="18" readonly aria-readonly="true">
+            </div>
+            <div class="m-input">
+              <div class="label">複数在庫60日</div>
+              <input id="multi60" value="24" readonly aria-readonly="true">
+            </div>
+            <div class="m-input">
+              <div class="label">予測販売数（自由記入）</div>
+              <input id="freeForecast" value="施策後は月150想定" readonly aria-readonly="true">
+            </div>
+          </div>
+
+          <!-- 下段：販売価格/粗利益 -->
+          <div class="bottom-pills">
+            <div class="pillbox">
+              <div class="l">販売価格（$）</div>
+              <div class="r">$39.99</div>
+            </div>
+            <div class="pillbox">
+              <div class="l">粗利益</div>
+              <div class="r">¥2,498 <span class="subtle">(40.3%)</span></div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- LOWER ROW -->
+      <div class="lower">
+        <section class="card-ui">
+          <h4>keepaグラフ</h4>
+          <div class="placeholder">（グラフ画像 / iframe想定）</div>
+        </section>
+
+        <section class="card-ui">
+          <h4>需要供給グラフ（180日）</h4>
+
+          <div class="chart-wrap">
+            <div class="chart-head">
+              <div class="title">需要供給グラフ（180日）</div>
+              <div class="toggles">
+                <label><input type="checkbox" checked /> 需要&amp;供給</label>
+                <label><input type="checkbox" /> 供給&amp;価格</label>
+              </div>
+            </div>
+
+            <div class="fake-graph" aria-label="グラフの見た目を再現したプレースホルダー">
+              <div class="fake-line"></div>
+            </div>
+
+            <div class="legend">
+              <span><i class="dot" style="background:rgba(59,130,246,.9)"></i>ランキング</span>
+              <span><i class="dot" style="background:rgba(245,158,11,.9)"></i>セラー数</span>
+              <span><i class="dot" style="background:rgba(16,185,129,.9)"></i>価格(USD)</span>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- RIGHT (cart) -->
+    <aside class="side" aria-label="カート">
+      <!-- 赤枠は最安値＋ボタンだけ -->
+      <div class="top-pill">
+        <div class="min">最安値： <span id="minPrice">¥—</span></div>
+        <small>各ショップを見る</small>
+        <button id="openModalBtn" type="button">ショップ別の価格・在庫を表示</button>
+      </div>
+
+      <!-- 入力欄は赤枠の外（下） -->
+      <div class="top-inputs" aria-label="上部入力">
+        <div class="sfield">
+          <div class="label">販売価格（$）</div>
+          <div class="control">
+            <input id="sellPriceUsd" inputmode="decimal" placeholder="例：39.99" />
+          </div>
+        </div>
+
+        <div class="sfield">
+          <div class="label">仕入れ額（¥）</div>
+          <div class="control">
+            <input id="avgCostJpy" inputmode="numeric" />
+            <button class="reset" id="resetAvgBtn" type="button" title="自動計算の値に戻す">↺</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="hinttxt" style="margin:10px 8px 0;">
+        ※カート内（価格×数量）の合計 ÷ 合計数量＝平均仕入れ額（自動）。手動変更した場合は↺で戻せます。
+      </div>
+
+      <div class="section-title">《カート》</div>
+      <div id="wishList"></div>
+
+      <div class="dash"></div>
+
+      <div class="actions">
+        <button class="btn" type="button">後で（仕入れリスト仮登録）</button>
+        <button class="btn primary" type="button">仕入れた（仕入れリスト登録）</button>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Modal: shop list -->
+  <div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-label="各ショップの価格と在庫">
+    <div class="modal">
+      <button class="close" id="closeBtn" type="button">×</button>
+      <h3>ショップ別の価格・在庫（価格の安い順）</h3>
+      <div class="modal-list" id="modalList"></div>
+      <div class="okwrap"><button class="ok" id="okBtn" type="button">OK</button></div>
+      <div class="hinttxt" style="margin:0 8px 2px;">※この画面でも数量を＋/−で変更できます</div>
+    </div>
+  </div>
+
+  <!-- Modal: manual add (＋) -->
+  <div class="overlay" id="manualOverlay" role="dialog" aria-modal="true" aria-label="手入力で追加">
+    <div class="modal mini" id="manualModal">
+      <button class="close" id="manualCloseBtn" type="button">×</button>
+      <div class="title" id="manualTitle">手入力で追加</div>
+
+      <div class="grid">
+        <div class="field">
+          <span>金額</span>
+          <input id="manualPrice" inputmode="numeric" pattern="[0-9]*" placeholder="例：3980">
+        </div>
+        <div class="field">
+          <span>数量</span>
+          <input id="manualQty" inputmode="numeric" pattern="[0-9]*" placeholder="例：2">
+        </div>
+      </div>
+
+      <div class="mini actions2">
+        <button class="addbtn" id="manualAddBtn" type="button">追加</button>
+      </div>
+
+      <div class="hinttxt" style="margin:10px 8px 0;">※追加した行は削除（×）できます</div>
+    </div>
+  </div>
+
+<script>
+  const shopData = [
+    { shop: "Amazon", slug:"amazon", includeInShopList: true, offers: [
+      { id: "amz-1", price: 3980, stock: 9,  qty: 0, manual:false },
+      { id: "amz-2", price: 4200, stock: 3,  qty: 0, manual:false },
+    ]},
+    { shop: "楽天", slug:"rakuten", includeInShopList: true, offers: [
+      { id: "rkt-1", price: 4150, stock: 5,  qty: 0, manual:false },
+    ]},
+    { shop: "Yahoo", slug:"yahoo", includeInShopList: true, offers: [
+      { id: "yah-1", price: 4090, stock: 12, qty: 0, manual:false },
+    ]},
+    { shop: "その他", slug:"other", includeInShopList: false, offers: [] },
+  ];
+
+  const yen = (n) => (Number.isFinite(n) ? "¥" + n.toLocaleString("ja-JP") : "¥—");
+  const clampInt = (v, min, max) => {
+    const n = Math.floor(Number(v));
+    if (!Number.isFinite(n)) return min;
+    return Math.min(max, Math.max(min, n));
+  };
+  function escapeHTML(str){
+    return String(str)
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+  function shopClass(slug){ return "shop-" + slug; }
+  function sortOffersByPrice(s){ s.offers.sort((a,b) => (a.price||0) - (b.price||0)); }
+
+  function findOfferById(id){
+    for (const s of shopData){
+      const o = s.offers.find(x => x.id === id);
+      if (o) return {shop:s, offer:o};
+    }
+    return null;
+  }
+  function setQty(id, nextQty){
+    const found = findOfferById(id);
+    if (!found) return;
+    found.offer.qty = Math.max(0, Math.min(999, nextQty));
+  }
+  function incQty(id, delta){
+    const found = findOfferById(id);
+    if (!found) return;
+    setQty(id, (Number(found.offer.qty)||0) + delta);
+  }
+
+  function computeMinPrice() {
+    const prices = [];
+    shopData.forEach(s => s.offers.forEach(o => {
+      if (o.price && o.price > 0 && (o.stock ?? 1) > 0) prices.push(o.price);
+    }));
+    return prices.length ? Math.min(...prices) : null;
+  }
+  function renderMinPrice(){
+    const mp = computeMinPrice();
+    document.getElementById("minPrice").textContent = mp ? yen(mp) : "¥—";
+  }
+
+  function computeAvgCostJpy(){
+    let totalCost = 0, totalQty = 0;
+    shopData.forEach(s => s.offers.forEach(o => {
+      const q = Number(o.qty)||0;
+      const p = Number(o.price)||0;
+      if (q>0 && p>0){
+        totalCost += p*q;
+        totalQty  += q;
+      }
+    }));
+    if (totalQty<=0) return null;
+    return Math.round(totalCost/totalQty);
+  }
+
+  const avgInput = document.getElementById("avgCostJpy");
+  const resetAvgBtn = document.getElementById("resetAvgBtn");
+  let avgIsManual = false;
+
+  function renderAvgCost(){
+    const auto = computeAvgCostJpy();
+    if (!avgIsManual){
+      avgInput.value = auto ? String(auto) : "";
+      avgInput.placeholder = auto ? "" : "—";
+    }
+    resetAvgBtn.disabled = !avgIsManual;
+    resetAvgBtn.style.opacity = avgIsManual ? "1" : ".55";
+  }
+  avgInput.addEventListener("input", () => { avgIsManual = true; renderAvgCost(); });
+  resetAvgBtn.addEventListener("click", () => { avgIsManual = false; renderAvgCost(); });
+
+  function renderStepper(qty, onMinus, onPlus){
+    const wrap = document.createElement("div");
+    wrap.className = "stepper";
+    wrap.innerHTML = `
+      <div class="label">数量</div>
+      <div class="controls">
+        <button class="qbtn" type="button" data-minus>−</button>
+        <div class="qval" data-val>${qty}</div>
+        <button class="qbtn" type="button" data-plus>＋</button>
+      </div>
+    `;
+    wrap.querySelector("[data-minus]").addEventListener("click", onMinus);
+    wrap.querySelector("[data-plus]").addEventListener("click", onPlus);
+    return wrap;
+  }
+
+  function renderWishList(){
+    const root = document.getElementById("wishList");
+    root.innerHTML = "";
+
+    shopData.forEach((s) => {
+      sortOffersByPrice(s);
+      const picked = s.offers.filter(o => (o.qty ?? 0) > 0);
+
+      const block = document.createElement("div");
+      block.className = "shop-block";
+
+      const head = document.createElement("div");
+      head.className = "shop-head";
+      head.innerHTML = `
+        <div class="name">${escapeHTML(s.shop)}
+          <button class="plus" type="button" title="手入力で追加" data-plus="${escapeHTML(s.slug)}">＋</button>
+        </div>
+      `;
+
+      const rows = document.createElement("div");
+      rows.className = "rows";
+
+      if (picked.length === 0){
+        const empty = document.createElement("div");
+        empty.className = "row dim";
+        empty.innerHTML = `<div class="price">¥—</div><div class="right"></div>`;
+        const st = renderStepper("", ()=>{}, ()=>{});
+        st.style.opacity = ".55";
+        st.querySelector("[data-minus]").disabled = true;
+        st.querySelector("[data-plus]").disabled = true;
+        empty.querySelector(".right").appendChild(st);
+        rows.appendChild(empty);
+      } else {
+        picked.forEach(o => {
+          const r = document.createElement("div");
+          r.className = `row ${shopClass(s.slug)}`;
+          r.innerHTML = `<div class="price">${yen(o.price)}</div><div class="right"></div>`;
+
+          const st = renderStepper(o.qty,
+            ()=>{ incQty(o.id, -1); renderAll(false); },
+            ()=>{ incQty(o.id, +1); renderAll(false); }
+          );
+          r.querySelector(".right").appendChild(st);
+
+          if (o.manual){
+            const del = document.createElement("button");
+            del.className = "del";
+            del.type = "button";
+            del.title = "削除";
+            del.textContent = "×";
+            del.addEventListener("click", () => { removeOfferById(o.id); });
+            r.querySelector(".right").appendChild(del);
+          }
+          rows.appendChild(r);
+        });
+      }
+
+      block.appendChild(head);
+      block.appendChild(rows);
+      root.appendChild(block);
+
+      head.querySelector("[data-plus]").addEventListener("click", () => openManualAdd(s.slug));
+    });
+
+    renderAvgCost();
+  }
+
+  function removeOfferById(offerId){
+    for (const s of shopData){
+      const idx = s.offers.findIndex(o => o.id === offerId);
+      if (idx >= 0){
+        s.offers.splice(idx, 1);
+        sortOffersByPrice(s);
+        break;
+      }
+    }
+    renderAll();
+  }
+
+  function flattenShopOffersSorted(){
+    const items = [];
+    shopData.filter(s => s.includeInShopList).forEach(s => {
+      s.offers.forEach(o => items.push({ shop:s, offer:o }));
+    });
+    items.sort((a,b) => (a.offer.price||0) - (b.offer.price||0));
+    return items;
+  }
+
+  function renderModal(){
+    const list = document.getElementById("modalList");
+    list.innerHTML = "";
+
+    const items = flattenShopOffersSorted();
+    items.forEach(({shop, offer}) => {
+      const card = document.createElement("div");
+      card.className = `card ${shopClass(shop.slug)}`;
+      card.innerHTML = `
+        <div class="card-head">
+          <div>ショップ名：${escapeHTML(shop.shop)}</div>
+          <div style="font-size:12px; font-weight:1000; opacity:.86;">在庫：${escapeHTML(String(offer.stock))}</div>
+        </div>
+        <div class="meta">
+          <div class="pill"><span>価格</span><span style="font-weight:1000;">${yen(offer.price)}</span></div>
+          <div class="pill" data-stepper-host></div>
+        </div>
+      `;
+      const host = card.querySelector("[data-stepper-host]");
+      const st = renderStepper(offer.qty,
+        ()=>{ incQty(offer.id, -1); refreshModalOnly(); },
+        ()=>{ incQty(offer.id, +1); refreshModalOnly(); }
+      );
+      st.style.minWidth = "100%";
+      host.appendChild(st);
+      list.appendChild(card);
+    });
+  }
+
+  function refreshModalOnly(){
+    if (overlay.classList.contains("open")) renderModal();
+    renderAll(false);
+  }
+
+  const manualOverlay = document.getElementById("manualOverlay");
+  const manualCloseBtn = document.getElementById("manualCloseBtn");
+  const manualAddBtn = document.getElementById("manualAddBtn");
+  const manualTitle = document.getElementById("manualTitle");
+  const manualPrice = document.getElementById("manualPrice");
+  const manualQty   = document.getElementById("manualQty");
+  let activeSlug = null;
+
+  function openManualAdd(slug){
+    activeSlug = slug;
+    const s = shopData.find(x => x.slug === slug);
+    manualTitle.textContent = `手入力で追加：${s ? s.shop : ""}`;
+    manualPrice.value = "";
+    manualQty.value = "";
+    manualOverlay.classList.add("open");
+    setTimeout(() => manualPrice.focus(), 50);
+  }
+  function closeManualAdd(){ manualOverlay.classList.remove("open"); }
+
+  manualCloseBtn.addEventListener("click", closeManualAdd);
+  manualOverlay.addEventListener("click", (e) => { if (e.target === manualOverlay) closeManualAdd(); });
+
+  manualAddBtn.addEventListener("click", () => {
+    const price = clampInt(manualPrice.value, 0, 99999999);
+    const qty   = clampInt(manualQty.value,   0, 999);
+    if (!activeSlug) return;
+    if (price <= 0) { manualPrice.focus(); return; }
+
+    const s = shopData.find(x => x.slug === activeSlug);
+    if (!s) return;
+
+    s.offers.push({
+      id: `${activeSlug}-m-${Date.now().toString(36)}${Math.random().toString(36).slice(2,6)}`,
+      price, stock: 999, qty, manual:true
+    });
+
+    sortOffersByPrice(s);
+    renderAll();
+    closeManualAdd();
+  });
+
+  const overlay = document.getElementById("overlay");
+  const openModalBtn = document.getElementById("openModalBtn");
+  const closeBtn = document.getElementById("closeBtn");
+  const okBtn = document.getElementById("okBtn");
+
+  function openModal(){ renderModal(); overlay.classList.add("open"); }
+  function closeModal(){ overlay.classList.remove("open"); }
+
+  openModalBtn.addEventListener("click", openModal);
+  closeBtn.addEventListener("click", closeModal);
+  okBtn.addEventListener("click", () => { renderAll(); closeModal(); });
+
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) closeModal(); });
+
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      if (overlay.classList.contains("open")) closeModal();
+      if (manualOverlay.classList.contains("open")) closeManualAdd();
+    }
+  });
+
+  function renderAll(rerenderModalToo=true){
+    shopData.forEach(sortOffersByPrice);
+    renderMinPrice();
+    renderWishList();
+    if (rerenderModalToo && overlay.classList.contains("open")) renderModal();
+  }
+
+  renderAll();
+</script>
+</body>
+</html>
